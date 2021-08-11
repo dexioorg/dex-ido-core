@@ -28,27 +28,27 @@ describe('DexIDOPool Test', () => {
     it('Deploy pool', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await expect(dexIDOPool.deploy(now + 10, 5 * DAYS, 500, { }))
+        await expect(dexIDOPool.deploy(now + 10, 5 * DAYS, { }))
             .to.be.revertedWith('DexIDOPool::deploy: require sending DEX to the pool')
 
-        await expect(dexIDOPool.deploy(now - 10, 5 * DAYS, 500, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now - 10, 5 * DAYS, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::deploy: start time is too soon')
 
-        await expect(dexIDOPool.deploy(now + 10, 0 * DAYS, 500, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now + 10, 0 * DAYS, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::deploy: duration is too short')
 
-        await expect(dexIDOPool.connect(user).deploy(now + 10, 5 * DAYS, 500, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.connect(user).deploy(now + 10, 5 * DAYS, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('Ownable: caller is not the owner')
 
-        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 500, { value: expandTo18Decimals(105000) }))
+        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(100000) }))
             .to.emit(dexIDOPool, 'Deployed')
-            .withArgs(1, now + 2 * MINUTES, 5 * DAYS, expandTo18Decimals(100000), expandTo18Decimals(20000), 500, owner.address);
+            .withArgs(1, now + 2 * MINUTES, 5 * DAYS, expandTo18Decimals(100000), expandTo18Decimals(20000), owner.address);
     })
 
     it('Deposit', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 500, { value: expandTo18Decimals(105000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(105000) })
 
         await mineBlock(provider, now + 3 * MINUTES)
 
@@ -70,7 +70,7 @@ describe('DexIDOPool Test', () => {
     it('Withdraw', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 500, { value: expandTo18Decimals(105000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(105000) })
 
         await mineBlock(provider, now + 3 * MINUTES)
 
@@ -99,7 +99,7 @@ describe('DexIDOPool Test', () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
 
-        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50000, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::stoppable: contract has been stopped.')
 
         now = now + 3 * MINUTES
@@ -111,6 +111,6 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.start()
         expect(await dexIDOPool.stopped()).to.equal(false);
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 500, { value: expandTo18Decimals(100000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(100000) })
     })
 })
