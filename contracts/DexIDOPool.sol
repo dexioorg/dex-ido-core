@@ -160,7 +160,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         require(value > 0, 'DexIDOPool::deposit: require sending DEX to the pool');
 
         IDOPool storage info = _poolOf[poolNum];
-        require(info.number > 0, 'DexIDOPool::deposit: the pool is not existed.');
+        require(info.number == poolNum, 'DexIDOPool::deposit: the pool is not existed.');
 
         //Check if the pool has started
         require(block.timestamp >= info.start, 'DexIDOPool::deposit: the pool not ready.');
@@ -187,35 +187,61 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     }
 
     /*
-        withdraw DEX from the pool
+        withdraw DEX from the pool, the amount deposited today can be withdrawn, 
+        or withdraw all after the pool is over.
     */
-    function withdraw(uint32 poolNum) public payable nonReentrant stoppable returns (bool) {
+    function withdraw(uint32 poolNum, uint256 amount) public payable nonReentrant stoppable returns (bool) {
         IDOPool storage info = _poolOf[poolNum];
-        require(info.number > 0, 'DexIDOPool::deposit: the pool is not existed.');
+        require(info.number == poolNum, 'DexIDOPool::withdraw: the pool is not existed.');
 
-        //Check if the burning pool is over
-        require(
-            block.timestamp > (info.start + info.duration),
-            'DexIDOPool::withdraw: the pool is not over yet.'
-        );
+        uint256 total = _totalDepositOf[poolNum];
 
+        // pool is not over.
+        if (block.timestamp < (info.start + info.duration)) {
+            
+            require(
+                amount > 0, 
+                'DexIDOPool::withdraw: the pool is not over, amount is invalid.'
+            );
+
+            uint256 day = (block.timestamp - info.start) / 1 days;
+            uint256 today = _dailyDepositOf[poolNum][day][msg.sender];
+            
+            require(
+                today >= amount,
+                'DexIDOPool::withdraw: the amount deposited today is not enough.'
+            );
+
+            _totalDepositOf[poolNum] = total - amount;
+
+            uint256 _balance = _balanceOf[poolNum][msg.sender];
+            _balanceOf[poolNum][msg.sender] = _balance - amount;
+            
+            _dailyDepositOf[poolNum][day][msg.sender] = today - amount;
+
+            // transfer DEX to the address
+            msg.sender.transfer(amount);
+            emit Withdrawn(poolNum, msg.sender, amount);
+
+            return true;
+        }
+
+        // the pool is OVER.
+        
         uint256 withdrawAmount = _balanceOf[poolNum][msg.sender];
 
-        //Check whether the contract balance is sufficient
+        // Check whether the contract balance is sufficient
         require(
             address(this).balance >= withdrawAmount,
             'DexIDOPool::withdraw: the pool DEX balance is not enough.'
         );
 
-        uint256 total = _totalDepositOf[poolNum];
         _totalDepositOf[poolNum] = total - withdrawAmount;
-
         // balance of the address deposited
         _balanceOf[poolNum][msg.sender] = 0;
 
         // transfer DEX to the address
         msg.sender.transfer(withdrawAmount);
-
         emit Withdrawn(poolNum, msg.sender, withdrawAmount);
 
         return true;

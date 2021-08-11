@@ -48,7 +48,7 @@ describe('DexIDOPool Test', () => {
     it('Deposit', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(105000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(100000) })
 
         await mineBlock(provider, now + 3 * MINUTES)
 
@@ -70,20 +70,28 @@ describe('DexIDOPool Test', () => {
     it('Withdraw', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(105000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, { value: expandTo18Decimals(100000) })
 
         await mineBlock(provider, now + 3 * MINUTES)
 
+        await expect(dexIDOPool.connect(user).withdraw(1, 0))
+            .to.be.revertedWith('DexIDOPool::withdraw: the pool is not over, amount is invalid.')
+            
         await dexIDOPool.connect(user).deposit(1, { value: expandTo18Decimals(2) })
+            
+        await expect(dexIDOPool.connect(user).withdraw(1, expandTo18Decimals(3)))
+            .to.be.revertedWith('DexIDOPool::withdraw: the amount deposited today is not enough.')
+        
+        await dexIDOPool.connect(user).withdraw(1, expandTo18Decimals(1))
 
         await mineBlock(provider, now + 3 * DAYS)
 
-        await expect(dexIDOPool.connect(user).withdraw(1))
-            .to.be.revertedWith('DexIDOPool::withdraw: the pool is not over yet.')
+        await expect(dexIDOPool.connect(user).withdraw(1, 0))
+            .to.be.revertedWith('DexIDOPool::withdraw: the pool is not over, amount is invalid.')
 
         await mineBlock(provider, now + 6 * DAYS)
 
-        await dexIDOPool.connect(user).withdraw(1)
+        await dexIDOPool.connect(user).withdraw(1, 1)
 
         const totalDeposit = await dexIDOPool.totalDeposit(1);
         expect(totalDeposit).to.equal(expandTo18Decimals(0))
@@ -105,7 +113,7 @@ describe('DexIDOPool Test', () => {
         now = now + 3 * MINUTES
         await mineBlock(provider, now)
 
-        await expect(dexIDOPool.connect(user).withdraw(0))
+        await expect(dexIDOPool.connect(user).withdraw(1, 0))
             .to.be.revertedWith('DexIDOPool::stoppable: contract has been stopped.');
 
         await dexIDOPool.start()
