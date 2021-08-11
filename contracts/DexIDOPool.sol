@@ -37,7 +37,6 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 duration; // IDO pool duration
         uint256 totalAmount; // Total DEX amount of the pool
         uint256 limitPerDay; // Daily exchange limit
-        uint16 rewardRatio; // Reward ratio(‱) for referrals, range is 0 ~ 10000 which means 0.00% ~ 100.00%. eg: rewardRatio = 1234 equals to 12.34%
         address creator; // IDO pool creator
     }
 
@@ -64,7 +63,6 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 duration,
         uint256 totalAmount,
         uint256 limitPerDay,
-        uint16 rewardRatio,
         address creator
     );
     event Deposited(uint32 indexed number, address sender, uint256 amount);
@@ -118,8 +116,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     */
     function deploy(
         uint256 begin,
-        uint256 duration,
-        uint16 rewardRatio
+        uint256 duration
     ) public payable onlyOwner nonReentrant stoppable {
 
         uint256 value = msg.value;
@@ -130,9 +127,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
         require(duration > 0, 'DexIDOPool::deploy: duration is too short');
         
-        require(rewardRatio < 10000, 'DexIDOPool::deploy: rewardRatio is invalid');
-        
-        uint256 totalAmount = value.mul(10000).div(10000 + rewardRatio);
+        uint256 totalAmount = value;
 
         //Calculate the daily exchangeable amount，limitPerDay = value / duration(days)
         uint256 limitPerDay = totalAmount.div(duration.div(1 days));
@@ -147,14 +142,13 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
                 duration: duration,
                 totalAmount: totalAmount,
                 limitPerDay: limitPerDay,
-                rewardRatio: rewardRatio,
                 creator: msg.sender
             });
 
         //Record pool information
         _poolOf[_poolCount] = pool;
 
-        emit Deployed(pool.number, begin, duration, totalAmount, limitPerDay, rewardRatio, msg.sender);
+        emit Deployed(pool.number, begin, duration, totalAmount, limitPerDay, msg.sender);
     }
 
     /*

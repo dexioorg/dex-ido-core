@@ -37,9 +37,6 @@ describe('DexIDOPool Test', () => {
         await expect(dexIDOPool.deploy(now + 10, 0 * DAYS, 500, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::deploy: duration is too short')
 
-        await expect(dexIDOPool.deploy(now + 10, 5 * DAYS, 10001, { value: expandTo18Decimals(100000) }))
-            .to.be.revertedWith('DexIDOPool::deploy: rewardRatio is invalid')
-
         await expect(dexIDOPool.connect(user).deploy(now + 10, 5 * DAYS, 500, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('Ownable: caller is not the owner')
 
