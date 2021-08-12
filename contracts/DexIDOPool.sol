@@ -169,7 +169,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         require(block.timestamp <= (info.start + info.duration), 'DexIDOPool::deposit: the pool already ended.');
 
         //Calculate the current time belongs to the first few days of the start of the pool
-        uint256 day = (block.timestamp - info.start) / 1 days;
+        uint256 TODAY = (block.timestamp - info.start) / 1 days;
 
         uint256 total = _totalDepositOf[poolNum];
         _totalDepositOf[poolNum] = total + value;
@@ -177,11 +177,11 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 _balance = _balanceOf[poolNum][msg.sender];
         _balanceOf[poolNum][msg.sender] = _balance + value;
 
-        uint256 dailyDeposit = _dailyDeposit[poolNum][day];
-        _dailyDeposit[poolNum][day] = dailyDeposit + value;
+        uint256 dailyDeposit = _dailyDeposit[poolNum][TODAY];
+        _dailyDeposit[poolNum][TODAY] = dailyDeposit + value;
 
-        uint256 dailyDepositOf = _dailyDepositOf[poolNum][day][msg.sender];
-        _dailyDepositOf[poolNum][day][msg.sender] = dailyDepositOf + value;
+        uint256 dailyDepositOf = _dailyDepositOf[poolNum][TODAY][msg.sender];
+        _dailyDepositOf[poolNum][TODAY][msg.sender] = dailyDepositOf + value;
 
         emit Deposited(poolNum, msg.sender, value);
     }
@@ -204,11 +204,11 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
                 'DexIDOPool::withdraw: the pool is not over, amount is invalid.'
             );
 
-            uint256 day = (block.timestamp - info.start) / 1 days;
-            uint256 today = _dailyDepositOf[poolNum][day][msg.sender];
+            uint256 TODAY = (block.timestamp - info.start) / 1 days;
+            uint256 todayDeposit = _dailyDepositOf[poolNum][TODAY][msg.sender];
             
             require(
-                today >= amount,
+                todayDeposit >= amount,
                 'DexIDOPool::withdraw: the amount deposited today is not enough.'
             );
 
@@ -217,7 +217,8 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             uint256 _balance = _balanceOf[poolNum][msg.sender];
             _balanceOf[poolNum][msg.sender] = _balance - amount;
             
-            _dailyDepositOf[poolNum][day][msg.sender] = today - amount;
+            _dailyDepositOf[poolNum][TODAY][msg.sender] = todayDeposit - amount;
+            _dailyDeposit[poolNum][TODAY] = _dailyDeposit[poolNum][TODAY] - amount;
 
             // transfer DEX to the address
             msg.sender.transfer(amount);
