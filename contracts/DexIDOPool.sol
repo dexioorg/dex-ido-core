@@ -101,6 +101,22 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _balanceOf[poolNum][account];
     }
 
+    function availableToExchange(uint32 poolNum, address account) public view returns (uint256) {
+        IDOPool storage info = _poolOf[poolNum];
+        require(info.number == poolNum, 'DexIDOPool::availableToExchange: the pool is not existed.');
+
+        uint256 TODAY = (block.timestamp - info.start) / 1 days;
+        uint256 balance = _balanceOf[poolNum][account] - _dailyDepositOf[poolNum][TODAY][account];
+        uint256 total = _totalDepositOf[poolNum] - _dailyDeposit[poolNum][TODAY];
+        if (_totalDepositOf[poolNum] == _dailyDeposit[poolNum][TODAY]) {
+            return 0;
+        }
+
+        uint256 available = balance.mul(info.limitPerDay).div(total);
+
+        return available;
+    }
+
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     function stop() public onlyOwner {
