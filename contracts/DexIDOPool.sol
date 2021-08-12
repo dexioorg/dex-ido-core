@@ -97,7 +97,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _totalDepositOf[poolNum];
     }
 
-    function balance(uint32 poolNum, address account) public view returns (uint256) {
+    function balanceOf(uint32 poolNum, address account) public view returns (uint256) {
         return _balanceOf[poolNum][account];
     }
 
