@@ -30,6 +30,7 @@ import './DexIDOPool.sol';
 contract DexchangeCore is ReentrancyGuard, Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using Address for address;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -138,10 +139,10 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
     }
 
     function setPrice(address token, uint256 _price) public onlyOwner {
-        // require(
-        //     token.isContract(), 
-        //     "DexchangeCore::setPrice: call to non-contract"
-        // );
+        require(
+            token.isContract(), 
+            "DexchangeCore::setPrice: call to non-contract"
+        );
         require(
             _price > 0, 
             "DexchangeCore::setPrice: price is invalid"
@@ -174,10 +175,10 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
     */
     function buy(address token, uint256 amount) public payable nonReentrant stoppable {
         
-        // require(
-        //     token.isContract(), 
-        //     "DexchangeCore::setPrice: call to non-contract."
-        // );
+        require(
+            token.isContract(), 
+            "DexchangeCore::setPrice: call to non-contract."
+        );
 
         require(
             amount > 0,
