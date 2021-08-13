@@ -89,13 +89,13 @@ describe('DexchangeCore Test', () => {
             .to.be.revertedWith("DexchangeCore::acceptInvitation: pool number did not been set");
 
         const poolNum = await dexIDOPool.poolCount()
-        console.log('poolnum', poolNum)
         await dexchangeCore.setPoolNumber(poolNum)
 
         await expect(dexchangeCore.connect(user).acceptInvitation(user1.address))
             .to.be.revertedWith("DexchangeCore::acceptInvitation: referrer did not deposit DEX");
 
         await dexIDOPool.connect(user1).deposit(poolNum, { value: expandTo18Decimals(2) })
+        await dexIDOPool.connect(user2).deposit(poolNum, { value: expandTo18Decimals(2) })
 
         await dexchangeCore.connect(user).acceptInvitation(user1.address)
 
