@@ -155,6 +155,14 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
         Account accept invitation from referrer. 
     */
     function acceptInvitation(address referrer) public stoppable {
+        require(
+            address(_poolAddr) != address(0),
+            "DexchangeCore::acceptInvitation: pool address did not been set"
+        );
+        require(
+            _poolNum > 0,
+            "DexchangeCore::acceptInvitation: pool number did not been set"
+        );
         // require referrer has deposited.
         DexIDOPool pool = DexIDOPool(_poolAddr);
         require(
