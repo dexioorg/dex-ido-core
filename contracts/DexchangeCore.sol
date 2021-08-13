@@ -281,6 +281,8 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
             if (reward5 > 0) {
                 address(uint160(inviter5)).transfer(reward5);
             }
+        } else {
+            rewards = 0;
         }
 
         // send token to Contract
