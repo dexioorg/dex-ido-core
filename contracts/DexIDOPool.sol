@@ -32,7 +32,6 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     /* ========== STATE VARIABLES ========== */
 
     struct IDOPool {
-        uint32 number; // IDO pool number
         uint256 start; // IDO pool starting time
         uint256 duration; // IDO pool duration
         uint256 totalAmount; // Total DEX amount of the pool
@@ -42,31 +41,28 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
     // Stop contract function
     bool private _stopped;
-    // Current number of pools
-    uint32 private _poolCount = 0;
     // Pool info
-    mapping(uint32 => IDOPool) private _poolOf;
-    // Total deposited amount of a pool
-    mapping(uint32 => uint256) private _totalDepositOf;
-    // Deposited amount of the address in a pool
-    mapping(uint32 => mapping(address => uint256)) private _balanceOf;
+    IDOPool private _poolInfo;
+    // Total deposited amount of the pool
+    uint256 private _totalDepositOf;
+    // Deposited amount of the address in the pool
+    mapping(address => uint256) private _balanceOf;
     // Daily deposited amount of the pool
-    mapping(uint32 => mapping(uint256 => uint256)) private _dailyDeposit;
-    // Daily deposited amount of the address in a pool
-    mapping(uint32 => mapping(uint256 => mapping(address => uint256))) private _dailyDepositOf;
+    mapping(uint256 => uint256) private _dailyDeposit;
+    // Daily deposited amount of the address in the pool
+    mapping(uint256 => mapping(address => uint256)) private _dailyDepositOf;
 
     /* ========== EVENTS ========== */
 
     event Deployed(
-        uint32 indexed number,
         uint256 start,
         uint256 duration,
         uint256 totalAmount,
         uint256 limitPerDay,
         address creator
     );
-    event Deposited(uint32 indexed number, address sender, uint256 amount);
-    event Withdrawn(uint32 indexed number, address sender, uint256 amount);
+    event Deposited(address sender, uint256 amount);
+    event Withdrawn(address sender, uint256 amount);
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -84,31 +80,29 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     function stopped() public view returns (bool) {
         return _stopped;
     }
-
-    function poolCount() public view returns (uint32) {
-        return _poolCount;
+    
+    function totalDeposit() public view returns (uint256) {
+        return _totalDepositOf;
     }
 
-    // function poolInfo(uint32 poolNum) public view returns (IDOPool memory) {
-    //     return _poolOf[poolNum];
-    // }
-
-    function totalDeposit(uint32 poolNum) public view returns (uint256) {
-        return _totalDepositOf[poolNum];
+    function balanceOf(address account) public view returns (uint256) {
+        return _balanceOf[account];
     }
 
-    function balanceOf(uint32 poolNum, address account) public view returns (uint256) {
-        return _balanceOf[poolNum][account];
-    }
+    function availableToExchange(address account) public view returns (uint256) {
+        IDOPool storage info = _poolInfo;
 
-    function availableToExchange(uint32 poolNum, address account) public view returns (uint256) {
-        IDOPool storage info = _poolOf[poolNum];
-        require(info.number == poolNum, 'DexIDOPool::availableToExchange: the pool is not existed.');
+        if(info.start > block.timestamp) {
+            return 0;
+        }
+        if(block.timestamp > (info.start + info.duration)) {
+            return 0;
+        }
 
         uint256 TODAY = (block.timestamp - info.start) / 1 days;
-        uint256 balance = _balanceOf[poolNum][account] - _dailyDepositOf[poolNum][TODAY][account];
-        uint256 total = _totalDepositOf[poolNum] - _dailyDeposit[poolNum][TODAY];
-        if (_totalDepositOf[poolNum] == _dailyDeposit[poolNum][TODAY]) {
+        uint256 balance = _balanceOf[account] - _dailyDepositOf[TODAY][account];
+        uint256 total = _totalDepositOf - _dailyDeposit[TODAY];
+        if (_totalDepositOf == _dailyDeposit[TODAY]) {
             return 0;
         }
 
@@ -148,12 +142,8 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         //Calculate the daily exchangeable amount，limitPerDay = value / duration(days)
         uint256 limitPerDay = totalAmount.div(duration.div(1 days));
 
-        //Increase count
-        _poolCount = _poolCount + 1;
-
         IDOPool memory pool =
             IDOPool({
-                number: _poolCount,
                 start: begin,
                 duration: duration,
                 totalAmount: totalAmount,
@@ -162,21 +152,20 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             });
 
         //Record pool information
-        _poolOf[_poolCount] = pool;
+        _poolInfo = pool;
 
-        emit Deployed(pool.number, begin, duration, totalAmount, limitPerDay, msg.sender);
+        emit Deployed(begin, duration, totalAmount, limitPerDay, msg.sender);
     }
 
     /*
         deposit DEX to the pool
     */
-    function deposit(uint32 poolNum) public payable nonReentrant stoppable {
+    function deposit() public payable nonReentrant stoppable {
 
         uint256 value = msg.value;
         require(value > 0, 'DexIDOPool::deposit: require sending DEX to the pool');
 
-        IDOPool storage info = _poolOf[poolNum];
-        require(info.number == poolNum, 'DexIDOPool::deposit: the pool is not existed.');
+        IDOPool storage info = _poolInfo;
 
         //Check if the pool has started
         require(block.timestamp >= info.start, 'DexIDOPool::deposit: the pool not ready.');
@@ -187,30 +176,32 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         //Calculate the current time belongs to the first few days of the start of the pool
         uint256 TODAY = (block.timestamp - info.start) / 1 days;
 
-        uint256 total = _totalDepositOf[poolNum];
-        _totalDepositOf[poolNum] = total + value;
+        uint256 total = _totalDepositOf;
+        _totalDepositOf = total + value;
 
-        uint256 _balance = _balanceOf[poolNum][msg.sender];
-        _balanceOf[poolNum][msg.sender] = _balance + value;
+        uint256 _balance = _balanceOf[msg.sender];
+        _balanceOf[msg.sender] = _balance + value;
 
-        uint256 dailyDeposit = _dailyDeposit[poolNum][TODAY];
-        _dailyDeposit[poolNum][TODAY] = dailyDeposit + value;
+        uint256 dailyDeposit = _dailyDeposit[TODAY];
+        _dailyDeposit[TODAY] = dailyDeposit + value;
 
-        uint256 dailyDepositOf = _dailyDepositOf[poolNum][TODAY][msg.sender];
-        _dailyDepositOf[poolNum][TODAY][msg.sender] = dailyDepositOf + value;
+        uint256 dailyDepositOf = _dailyDepositOf[TODAY][msg.sender];
+        _dailyDepositOf[TODAY][msg.sender] = dailyDepositOf + value;
 
-        emit Deposited(poolNum, msg.sender, value);
+        emit Deposited(msg.sender, value);
     }
 
     /*
         withdraw DEX from the pool, the amount deposited today can be withdrawn, 
         or withdraw all after the pool is over.
     */
-    function withdraw(uint32 poolNum, uint256 amount) public nonReentrant stoppable returns (bool) {
-        IDOPool storage info = _poolOf[poolNum];
-        require(info.number == poolNum, 'DexIDOPool::withdraw: the pool is not existed.');
+    function withdraw(uint256 amount) public nonReentrant stoppable returns (bool) {
+        IDOPool storage info = _poolInfo;
 
-        uint256 total = _totalDepositOf[poolNum];
+        //Check if the pool has started
+        require(block.timestamp >= info.start, 'DexIDOPool::withdraw: the pool not ready.');
+
+        uint256 total = _totalDepositOf;
 
         // pool is not over.
         if (block.timestamp < (info.start + info.duration)) {
@@ -221,31 +212,31 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             );
 
             uint256 TODAY = (block.timestamp - info.start) / 1 days;
-            uint256 todayDeposit = _dailyDepositOf[poolNum][TODAY][msg.sender];
+            uint256 todayDeposit = _dailyDepositOf[TODAY][msg.sender];
             
             require(
                 todayDeposit >= amount,
                 'DexIDOPool::withdraw: the amount deposited today is not enough.'
             );
 
-            _totalDepositOf[poolNum] = total - amount;
+            _totalDepositOf = total - amount;
 
-            uint256 _balance = _balanceOf[poolNum][msg.sender];
-            _balanceOf[poolNum][msg.sender] = _balance - amount;
+            uint256 _balance = _balanceOf[msg.sender];
+            _balanceOf[msg.sender] = _balance - amount;
             
-            _dailyDepositOf[poolNum][TODAY][msg.sender] = todayDeposit - amount;
-            _dailyDeposit[poolNum][TODAY] = _dailyDeposit[poolNum][TODAY] - amount;
+            _dailyDepositOf[TODAY][msg.sender] = todayDeposit - amount;
+            _dailyDeposit[TODAY] = _dailyDeposit[TODAY] - amount;
 
             // transfer DEX to the address
             msg.sender.transfer(amount);
-            emit Withdrawn(poolNum, msg.sender, amount);
+            emit Withdrawn(msg.sender, amount);
 
             return true;
         }
 
         // the pool is OVER.
         
-        uint256 withdrawAmount = _balanceOf[poolNum][msg.sender];
+        uint256 withdrawAmount = _balanceOf[msg.sender];
 
         // Check whether the contract balance is sufficient
         require(
@@ -253,13 +244,13 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             'DexIDOPool::withdraw: the pool DEX balance is not enough.'
         );
 
-        _totalDepositOf[poolNum] = total - withdrawAmount;
+        _totalDepositOf = total - withdrawAmount;
         // balance of the address deposited
-        _balanceOf[poolNum][msg.sender] = 0;
+        _balanceOf[msg.sender] = 0;
 
         // transfer DEX to the address
         msg.sender.transfer(withdrawAmount);
-        emit Withdrawn(poolNum, msg.sender, withdrawAmount);
+        emit Withdrawn(msg.sender, withdrawAmount);
 
         return true;
     }

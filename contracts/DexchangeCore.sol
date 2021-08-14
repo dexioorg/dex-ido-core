@@ -42,8 +42,6 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
     uint16 private _rewardRate;
     // DEX IDO pool contract
     address private _poolAddr;
-    // IDO pool number
-    uint32 private _poolNum;
     // Exchange Rates, 1 DEX's equivalent token price
     mapping(address => uint256) private _exchangePrice;
     // Invitation map of accounts
@@ -60,8 +58,7 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
         uint256 price
     );
     event PoolChanged(
-        address pool,
-        uint32 poolNum
+        address pool
     );
     event RewardRateChanged(
         uint16 rewardRate
@@ -91,10 +88,6 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
 
     function poolAddress() public view returns (address) {
         return _poolAddr;
-    }
-
-    function poolNumber() public view returns (uint32) {
-        return _poolNum;
     }
 
     function exchanged() public view returns (uint256) {
@@ -130,12 +123,7 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
             "DexchangeCore::setPoolAddress: pool address is invalid"
         );
         _poolAddr = addr;
-        emit PoolChanged(addr, 0);
-    }
-
-    function setPoolNumber(uint32 num) public onlyOwner {
-        _poolNum = num;
-        emit PoolChanged(address(0), _poolNum);
+        emit PoolChanged(addr);
     }
 
     function setPrice(address token, uint256 _price) public onlyOwner {
@@ -188,14 +176,10 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
             address(_poolAddr) != address(0),
             "DexchangeCore::acceptInvitation: pool address did not been set"
         );
-        require(
-            _poolNum > 0,
-            "DexchangeCore::acceptInvitation: pool number did not been set"
-        );
         // require referrer has deposited.
         DexIDOPool pool = DexIDOPool(_poolAddr);
         require(
-            pool.balanceOf(_poolNum, referrer) > 0,
+            pool.balanceOf(referrer) > 0,
             "DexchangeCore::acceptInvitation: referrer did not deposit DEX"
         );
 
@@ -240,7 +224,7 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
 
         // fetch available DEX amount, and subtract the bought amount
         DexIDOPool pool = DexIDOPool(_poolAddr);
-        uint256 available = pool.availableToExchange(_poolNum, msg.sender);
+        uint256 available = pool.availableToExchange(msg.sender);
         uint256 day = (block.timestamp - AUGUST) / 1 days;
         uint256 today = _dailyExchange[day][msg.sender];
 
