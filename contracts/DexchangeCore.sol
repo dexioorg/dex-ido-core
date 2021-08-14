@@ -152,6 +152,35 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
     }
 
     /*
+        transfer token to recipient
+    */
+    function transfer(address token, address recipient, uint256 amount) public onlyOwner stoppable returns (bool) {
+       require(
+            token.isContract(), 
+            "DexchangeCore::transfer: call to non-contract."
+        );
+        require(
+            recipient != address(0),
+            "DexchangeCore::transfer: recipient is invalid."
+        );
+        require(
+            amount > 0,
+            "DexchangeCore::transfer: input amount is invalid."
+        );
+        
+        IERC20 tokenContract = IERC20(token);
+
+        require(
+            tokenContract.balanceOf(address(this)) >= amount,
+            "DexchangeCore::transfer: token balance is insufficient"
+        );
+
+        tokenContract.safeTransferFrom(address(this), recipient, amount);
+
+        return true;
+    }
+
+    /*
         Account accept invitation from referrer. 
     */
     function acceptInvitation(address referrer) public stoppable {
@@ -181,7 +210,7 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
     /*
         deposit DEX to the pool
     */
-    function buy(address token, uint256 amount) public payable nonReentrant stoppable {
+    function buy(address token, uint256 amount) public nonReentrant stoppable {
         
         require(
             token.isContract(), 
