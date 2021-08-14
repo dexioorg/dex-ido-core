@@ -185,21 +185,21 @@ describe('DexIDOPool Test', () => {
         //     .to.equal(expandTo18Decimals(1364))
     })
 
-    it('accept invitation', async () => {
+    it('Accept invitation', async () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
         await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
         await mineBlock(provider, now + 2 * MINUTES)
         
-        await expect(dexIDOPool.connect(user).acceptInvitation(user1.address))
-            .to.be.revertedWith("DexIDOPool::acceptInvitation: referrer did not deposit DEX");
+        await expect(dexIDOPool.connect(user).accept(user1.address))
+            .to.be.revertedWith("DexIDOPool::accept: referrer did not deposit DEX");
 
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2) })
         await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(2) })
 
-        await dexIDOPool.connect(user).acceptInvitation(user1.address)
+        await dexIDOPool.connect(user).accept(user1.address)
 
-        await expect(dexIDOPool.connect(user).acceptInvitation(user2.address))
-            .to.be.revertedWith("DexIDOPool::acceptInvitation: has been accepted invitation");
+        await expect(dexIDOPool.connect(user).accept(user2.address))
+            .to.be.revertedWith("DexIDOPool::accept: has been accepted invitation");
     })
 })
