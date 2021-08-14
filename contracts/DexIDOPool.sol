@@ -206,7 +206,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         withdraw DEX from the pool, the amount deposited today can be withdrawn, 
         or withdraw all after the pool is over.
     */
-    function withdraw(uint32 poolNum, uint256 amount) public payable nonReentrant stoppable returns (bool) {
+    function withdraw(uint32 poolNum, uint256 amount) public nonReentrant stoppable returns (bool) {
         IDOPool storage info = _poolOf[poolNum];
         require(info.number == poolNum, 'DexIDOPool::withdraw: the pool is not existed.');
 
