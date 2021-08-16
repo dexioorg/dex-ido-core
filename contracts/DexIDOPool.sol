@@ -398,11 +398,12 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             address inviter4 = address(0);
             address inviter5 = address(0);
             if (inviter2 != address(0)) {
-                // 2st level referrer
+                // 2nd level referrer
                 inviter3 = _invitations[inviter2];
                 if (inviter3 != address(0)) {
-                    // 3st level referrer
+                    // 3rd level referrer
                     inviter4 = _invitations[inviter3];
+                    // 4th level referrer
                     if (inviter4 != address(0)) {
                         inviter5 = _invitations[inviter4];
                         if (inviter5 != address(0)) {
