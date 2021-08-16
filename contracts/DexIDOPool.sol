@@ -193,16 +193,16 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 TODAY = (block.timestamp - pool.start) / 1 days;
 
         uint256 total = _totalDepositOf;
-        _totalDepositOf = total + value;
+        _totalDepositOf = total.add(value);
 
         uint256 _balance = _balanceOf[msg.sender];
-        _balanceOf[msg.sender] = _balance + value;
+        _balanceOf[msg.sender] = _balance.add(value);
 
         uint256 dailyDeposit = _dailyDeposit[TODAY];
-        _dailyDeposit[TODAY] = dailyDeposit + value;
+        _dailyDeposit[TODAY] = dailyDeposit.add(value);
 
         uint256 dailyDepositOf = _dailyDepositOf[TODAY][msg.sender];
-        _dailyDepositOf[TODAY][msg.sender] = dailyDepositOf + value;
+        _dailyDepositOf[TODAY][msg.sender] = dailyDepositOf.add(value);
 
         emit Deposited(msg.sender, value);
     }
@@ -459,9 +459,9 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         // send token to Contract
         tokenContract.safeTransferFrom(msg.sender, address(this), totalAmount);
     
-        _totalExchange = _totalExchange + amount;
+        _totalExchange = _totalExchange.add(amount);
 
-        _dailyExchange[TODAY][msg.sender] = today + amount;
+        _dailyExchange[TODAY][msg.sender] = today.add(amount);
 
         // send DEX to sender, subtract rewards
         msg.sender.transfer(amount - rewards);
