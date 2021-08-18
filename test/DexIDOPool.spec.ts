@@ -244,14 +244,16 @@ describe('DexIDOPool Test', () => {
         await expect(dexIDOPool.connect(owner).refund(user1.address, 1000))
             .to.be.revertedWith("DexIDOPool::refund: balance is insufficient")
 
-        expect(await provider.getBalance(dexIDOPool.address)).to.equal(0)
-        // console.log('balance' , await (await provider.getBalance(owner.address)).toString())
-        await owner.sendTransaction({ to: dexIDOPool.address, value: expandTo18Decimals(2000) })
-        expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(2000))
+        var { timestamp: now } = await provider.getBlock('latest')
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
         
-        expect(await provider.getBalance(user.address)).to.equal(0)
+        expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000))
+        
+        const balanceBefore = await provider.getBalance(user.address) 
         await dexIDOPool.connect(owner).refund(user.address, expandTo18Decimals(1000))
-        expect(await provider.getBalance(user.address)).to.equal(expandTo18Decimals(1000))
+        expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000 - 1000))
+        const balanceAfter = await provider.getBalance(user.address) 
+        expect(balanceAfter.sub(balanceBefore)).to.equal(expandTo18Decimals(1000))
 
     })
 })
