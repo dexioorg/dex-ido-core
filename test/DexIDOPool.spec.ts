@@ -93,7 +93,11 @@ describe('DexIDOPool Test', () => {
 
         await mineBlock(provider, now + 6 * DAYS)
 
+        const balanceBefore = await provider.getBalance(user.address)
         await dexIDOPool.connect(user).withdraw(1)
+        const balanceAfter = await provider.getBalance(user.address)
+
+        expect(balanceAfter.div(balanceBefore)).equal(1)
 
         const totalDeposit = await dexIDOPool.totalDeposit();
         expect(totalDeposit).to.equal(expandTo18Decimals(0))
@@ -226,7 +230,6 @@ describe('DexIDOPool Test', () => {
         
         expect(await testERC20.balanceOf(user.address)).to.equal(0)
         await dexIDOPool.connect(owner).transfer(testERC20.address, user.address, expandTo18Decimals(1000))
-        console.log('dex', (await provider.getBalance(owner.address)).toString())
         expect(await testERC20.balanceOf(user.address)).to.equal(expandTo18Decimals(1000))
     })
 

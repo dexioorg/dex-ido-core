@@ -285,7 +285,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             "DexIDOPool::transfer: token balance is insufficient"
         );
 
-        tokenContract.safeTransferFrom(address(this), recipient, amount);
+        tokenContract.safeTransfer(recipient, amount);
 
         return true;
     }
@@ -458,7 +458,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         }
 
         // send token to Contract
-        tokenContract.safeTransferFrom(msg.sender, address(this), totalAmount);
+        tokenContract.safeTransfer(address(this), totalAmount);
     
         _totalExchange = _totalExchange.add(amount);
 
