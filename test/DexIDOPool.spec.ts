@@ -118,6 +118,9 @@ describe('DexIDOPool Test', () => {
         await expect(dexIDOPool.connect(user).withdraw(0))
             .to.be.revertedWith('DexIDOPool::stoppable: contract has been stopped.');
 
+        await expect(dexIDOPool.connect(user).start())
+            .to.be.revertedWith("Ownable: caller is not the owner")
+
         await dexIDOPool.start()
         expect(await dexIDOPool.stopped()).to.equal(false);
 
@@ -201,5 +204,51 @@ describe('DexIDOPool Test', () => {
 
         await expect(dexIDOPool.connect(user).accept(user2.address))
             .to.be.revertedWith("DexIDOPool::accept: has been accepted invitation");
+    })
+
+    it('Transfer', async () => {
+
+        await expect(dexIDOPool.connect(user).transfer(testERC20.address, user1.address, 1000))
+            .to.be.revertedWith("Ownable: caller is not the owner")
+
+        await expect(dexIDOPool.connect(owner).transfer(user1.address, user2.address, 1000))
+            .to.be.revertedWith("DexIDOPool::transfer: call to non-contract.")
+
+        await expect(dexIDOPool.connect(owner).transfer(testERC20.address, user1.address, 0))
+            .to.be.revertedWith("DexIDOPool::transfer: input amount is invalid.")
+
+        await expect(dexIDOPool.connect(owner).transfer(testERC20.address, user1.address, 1000))
+            .to.be.revertedWith("DexIDOPool::transfer: token balance is insufficient")
+
+        expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(0)
+        await testERC20.transfer(dexIDOPool.address, expandTo18Decimals(2000))
+        expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(expandTo18Decimals(2000))
+        
+        expect(await testERC20.balanceOf(user.address)).to.equal(0)
+        await dexIDOPool.connect(owner).transfer(testERC20.address, user.address, expandTo18Decimals(1000))
+        console.log('dex', (await provider.getBalance(owner.address)).toString())
+        expect(await testERC20.balanceOf(user.address)).to.equal(expandTo18Decimals(1000))
+    })
+
+    it('Refund', async () => {
+
+        await expect(dexIDOPool.connect(user).refund(user1.address, 1000))
+            .to.be.revertedWith("Ownable: caller is not the owner")
+
+        await expect(dexIDOPool.connect(owner).refund(user1.address, 0))
+            .to.be.revertedWith("DexIDOPool::refund: input amount is invalid.")
+
+        await expect(dexIDOPool.connect(owner).refund(user1.address, 1000))
+            .to.be.revertedWith("DexIDOPool::refund: balance is insufficient")
+
+        expect(await provider.getBalance(dexIDOPool.address)).to.equal(0)
+        // console.log('balance' , await (await provider.getBalance(owner.address)).toString())
+        await owner.sendTransaction({ to: dexIDOPool.address, value: expandTo18Decimals(2000) })
+        expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(2000))
+        
+        expect(await provider.getBalance(user.address)).to.equal(0)
+        await dexIDOPool.connect(owner).refund(user.address, expandTo18Decimals(1000))
+        expect(await provider.getBalance(user.address)).to.equal(expandTo18Decimals(1000))
+
     })
 })
