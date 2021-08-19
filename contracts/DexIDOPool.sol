@@ -106,8 +106,8 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         }
 
         uint256 TODAY = (block.timestamp - pool.start) / 1 days;
-        uint256 balance = _balanceOf[account] - _dailyDepositOf[TODAY][account];
-        uint256 total = _totalDepositOf - _dailyDeposit[TODAY];
+        uint256 balance = _balanceOf[account].sub(_dailyDepositOf[TODAY][account]);
+        uint256 total = _totalDepositOf.sub(_dailyDeposit[TODAY]);
         if (_totalDepositOf == _dailyDeposit[TODAY]) {
             return 0;
         }
@@ -228,13 +228,12 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
             require(todayDeposit >= amount, 'DexIDOPool::withdraw: the amount deposited today is not enough.');
 
-            _totalDepositOf = total - amount;
+            _totalDepositOf = total.sub(amount);
 
-            uint256 _balance = _balanceOf[msg.sender];
-            _balanceOf[msg.sender] = _balance - amount;
+            _balanceOf[msg.sender] = _balanceOf[msg.sender].sub(amount);
 
-            _dailyDepositOf[TODAY][msg.sender] = todayDeposit - amount;
-            _dailyDeposit[TODAY] = _dailyDeposit[TODAY] - amount;
+            _dailyDepositOf[TODAY][msg.sender] = todayDeposit.sub(amount);
+            _dailyDeposit[TODAY] = _dailyDeposit[TODAY].sub(amount);
 
             // transfer DEX to the address
             msg.sender.transfer(amount);
@@ -250,7 +249,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         // Check whether the contract balance is sufficient
         require(address(this).balance >= withdrawAmount, 'DexIDOPool::withdraw: the pool DEX balance is not enough.');
 
-        _totalDepositOf = total - withdrawAmount;
+        _totalDepositOf = total.sub(withdrawAmount);
         // balance of the address deposited
         _balanceOf[msg.sender] = 0;
 
@@ -379,7 +378,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 today = _dailyExchange[TODAY][msg.sender];
 
         require(
-            available - today > amount,
+            available.sub(today) > amount,
             "DexIDOPool::buy: amount exceeds the available amount"
         );
 
@@ -465,7 +464,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         _dailyExchange[TODAY][msg.sender] = today.add(amount);
 
         // send DEX to sender, subtract rewards
-        msg.sender.transfer(amount - rewards);
+        msg.sender.transfer(amount.sub(rewards));
 
         emit Bought(msg.sender, amount, token, _price);
     }
