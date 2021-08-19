@@ -365,7 +365,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
         IERC20 tokenContract = IERC20(token);
 
-        uint256 totalAmount = amount.mul(_price);
+        uint256 totalAmount = amount.mul(_price).div(1000000000000000000);
 
         require(
             tokenContract.balanceOf(msg.sender) >= totalAmount,
@@ -385,6 +385,15 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         // calculate the referral rewards
         uint256 rewards = amount.mul(pool.rewardRate).div(1000);
         address inviter1 = _invitations[msg.sender];
+        
+        require(
+            inviter1 != address(0),
+            "DexIDOPool::buy: you must have a referrer"
+        );
+
+        // send token to Contract
+        tokenContract.safeTransfer(address(this), totalAmount);
+
         if (inviter1 != address(0)) {
             // 1st level referrer
             uint256 reward1 = 0;
@@ -452,12 +461,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             if (reward5 > 0) {
                 address(uint160(inviter5)).transfer(reward5);
             }
-        } else {
-            rewards = 0;
         }
-
-        // send token to Contract
-        tokenContract.safeTransfer(address(this), totalAmount);
     
         _totalExchange = _totalExchange.add(amount);
 
