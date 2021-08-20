@@ -378,7 +378,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 today = _dailyExchange[TODAY][msg.sender];
 
         require(
-            available.sub(today) > amount,
+            available.sub(today) >= amount,
             "DexIDOPool::buy: amount exceeds the available amount"
         );
 
