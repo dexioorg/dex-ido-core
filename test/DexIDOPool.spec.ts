@@ -25,6 +25,7 @@ describe('DexIDOPool Test', () => {
         dexchangeCore = fixture.dexchangeCore
         testERC20 = fixture.testERC20
         dexIDOPool = fixture.dexIDOPool
+        await dexchangeCore.setPrice(testERC20.address, expandTo18Decimals(2))
     })
 
     it('Deploy pool', async () => {
@@ -63,10 +64,10 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(2) })
 
         const totalDeposit = await dexIDOPool.totalDeposit();
-        expect(totalDeposit).to.equal(expandTo18Decimals(2))
+        await expect(totalDeposit).to.equal(expandTo18Decimals(2))
 
         const balance = await dexIDOPool.balanceOf(user.address)
-        expect(balance).to.equal(expandTo18Decimals(2))
+        await expect(balance).to.equal(expandTo18Decimals(2))
     })
 
     it('Withdraw', async () => {
@@ -97,16 +98,16 @@ describe('DexIDOPool Test', () => {
             .to.changeEtherBalance(user, expandTo18Decimals(1), {includeFee: false})
 
         const totalDeposit = await dexIDOPool.totalDeposit();
-        expect(totalDeposit).to.equal(expandTo18Decimals(0))
+        await expect(totalDeposit).to.equal(expandTo18Decimals(0))
 
         const balance = await dexIDOPool.balanceOf(user.address)
-        expect(balance).to.equal(expandTo18Decimals(0))
+        await expect(balance).to.equal(expandTo18Decimals(0))
     })
 
     it('Contract stoppable', async () => {
 
         await dexIDOPool.stop()
-        expect(await dexIDOPool.stopped()).to.equal(true);
+        await expect(await dexIDOPool.stopped()).to.equal(true);
 
         var { timestamp: now } = await provider.getBlock('latest')
 
@@ -123,7 +124,7 @@ describe('DexIDOPool Test', () => {
             .to.be.revertedWith("Ownable: caller is not the owner")
 
         await dexIDOPool.start()
-        expect(await dexIDOPool.stopped()).to.equal(false);
+        await expect(await dexIDOPool.stopped()).to.equal(false);
 
         await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) })
     })
@@ -139,15 +140,15 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(20000) })
         await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(10000) })
 
-        expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(100000))
+        await expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(100000))
 
-        expect(await dexIDOPool.availableToExchange(user.address))
+        await expect(await dexIDOPool.availableToExchange(user.address))
             .to.equal(expandTo18Decimals(0))
-        expect(await dexIDOPool.availableToExchange(user1.address))
+        await expect(await dexIDOPool.availableToExchange(user1.address))
             .to.equal(expandTo18Decimals(0))
-        expect(await dexIDOPool.availableToExchange(user2.address))
+        await expect(await dexIDOPool.availableToExchange(user2.address))
             .to.equal(expandTo18Decimals(0))
-        expect(await dexIDOPool.availableToExchange(user3.address))
+        await expect(await dexIDOPool.availableToExchange(user3.address))
             .to.equal(expandTo18Decimals(0))
 
         // DAY 2
@@ -158,15 +159,15 @@ describe('DexIDOPool Test', () => {
         // await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(0) })
         await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(5000) })
 
-        expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(110000))
+        await expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(110000))
 
-        expect(await dexIDOPool.availableToExchange(user.address))
+        await expect(await dexIDOPool.availableToExchange(user.address))
             .to.equal(expandTo18Decimals(4000))
-        expect(await dexIDOPool.availableToExchange(user1.address))
+        await expect(await dexIDOPool.availableToExchange(user1.address))
             .to.equal(expandTo18Decimals(3000))
-        expect(await dexIDOPool.availableToExchange(user2.address))
+        await expect(await dexIDOPool.availableToExchange(user2.address))
             .to.equal(expandTo18Decimals(2000))
-        expect(await dexIDOPool.availableToExchange(user3.address))
+        await expect(await dexIDOPool.availableToExchange(user3.address))
             .to.equal(expandTo18Decimals(1000))
 
         // DAY 3
@@ -177,7 +178,7 @@ describe('DexIDOPool Test', () => {
         // await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(0) })
         // await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(5000) })
 
-        expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(110000))
+        await expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(110000))
 
         // expect(await dexIDOPool.availableToExchange(user.address))
         //     .to.equal(3636363636363636363636)
@@ -221,13 +222,13 @@ describe('DexIDOPool Test', () => {
         await expect(dexIDOPool.connect(owner).transfer(testERC20.address, user1.address, 1000))
             .to.be.revertedWith("DexIDOPool::transfer: token balance is insufficient")
 
-        expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(0)
+        await expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(0)
         await testERC20.transfer(dexIDOPool.address, expandTo18Decimals(2000))
-        expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(expandTo18Decimals(2000))
+        await expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(expandTo18Decimals(2000))
         
-        expect(await testERC20.balanceOf(user.address)).to.equal(0)
+        await expect(await testERC20.balanceOf(user.address)).to.equal(0)
         await dexIDOPool.connect(owner).transfer(testERC20.address, user.address, expandTo18Decimals(1000))
-        expect(await testERC20.balanceOf(user.address)).to.equal(expandTo18Decimals(1000))
+        await expect(await testERC20.balanceOf(user.address)).to.equal(expandTo18Decimals(1000))
     })
 
     it('Refund', async () => {
@@ -244,7 +245,7 @@ describe('DexIDOPool Test', () => {
         var { timestamp: now } = await provider.getBlock('latest')
         await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
         
-        expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000))
+        await expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000))
         
         await expect(await dexIDOPool.connect(owner).refund(user.address, expandTo18Decimals(1000)))
             .to.changeEtherBalances([dexIDOPool, user], ["-" + expandTo18Decimals(1000).toString(), expandTo18Decimals(1000)], {includeFee: false})
