@@ -371,6 +371,10 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             tokenContract.balanceOf(msg.sender) >= totalAmount,
             "DexIDOPool::buy: token balance is insufficient"
         );
+        require(
+            tokenContract.allowance(msg.sender, address(this)) >= totalAmount,
+            "DexIDOPool::buy: token allowance is insufficient"
+        );
 
         // fetch available DEX amount, and subtract the bought amount
         uint256 available = this.availableToExchange(msg.sender);
