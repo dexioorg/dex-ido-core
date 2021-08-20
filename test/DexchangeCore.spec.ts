@@ -36,9 +36,6 @@ describe('DexchangeCore Test', () => {
         await expect(dexchangeCore.setPrice(user.address, expandTo18Decimals(2)))
             .to.be.revertedWith("DexchangeCore::setPrice: call to non-contract");
 
-        await expect(dexchangeCore.setPrice(testERC20.address, 0))
-            .to.be.revertedWith("DexchangeCore::setPrice: price is invalid");
-
         await expect(dexchangeCore.setPrice(testERC20.address, expandTo18Decimals(2)))
             .to.be.emit(dexchangeCore, "PriceChanged");
 
