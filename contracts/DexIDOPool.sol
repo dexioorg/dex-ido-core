@@ -392,7 +392,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         );
 
         // send token to Contract
-        tokenContract.safeTransfer(address(this), totalAmount);
+        tokenContract.safeTransferFrom(msg.sender, address(this), totalAmount);
 
         if (inviter1 != address(0)) {
             // 1st level referrer
