@@ -250,6 +250,69 @@ describe('DexIDOPool Test', () => {
         await expect(await dexIDOPool.connect(owner).refund(user.address, expandTo18Decimals(1000)))
             .to.changeEtherBalances([dexIDOPool, user], ["-" + expandTo18Decimals(1000).toString(), expandTo18Decimals(1000)], {includeFee: false})
 
+    })
+
+    it("Buy dex, only 1 referrer", async () => {
+
+        var { timestamp: now } = await provider.getBlock('latest')
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+
+        await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(2000)))
+            .to.be.revertedWith("DexIDOPool::buy: the pool not ready.")
+
+        await mineBlock(provider, now + 2 * MINUTES)
+
+        await expect(dexIDOPool.connect(user).buy(user1.address, expandTo18Decimals(2000)))
+            .to.be.revertedWith("DexIDOPool::buy: call to non-contract.")
+
+        await expect(dexIDOPool.connect(user).buy(testERC20.address, 0))
+            .to.be.revertedWith("DexIDOPool::buy: input amount is invalid.")
+
+        const price = await dexchangeCore.price(testERC20.address)
+        const amount = 2000
+        const totalAmount = price.mul(amount)
+
+        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(4000) })
+        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(user).accept(user1.address)
+        
+        await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
+
+        await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
+            .to.be.revertedWith("DexIDOPool::buy: token balance is insufficient")
+
+        await testERC20.transfer(dexIDOPool.address, 1)
+        await expect(() => testERC20.transfer(user.address, totalAmount))
+            .to.changeTokenBalance(testERC20, user, totalAmount)
+            
+        await expect(await dexIDOPool.availableToExchange(user.address))
+            .be.equal(expandTo18Decimals(amount)) // amount = 2000
+        
+        await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
+            .to.be.revertedWith("DexIDOPool::buy: token allowance is insufficient")
+        
+        await testERC20.connect(user).approve(dexIDOPool.address, totalAmount)
+
+        const tokenBefore = await testERC20.balanceOf(user.address)
+        const poolBefore = await testERC20.balanceOf(dexIDOPool.address)
+
+        // amount = 2000, rewards = amount * 50/1000  
+        await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
+            .to.changeEtherBalances([user, user1], [
+                    expandTo18Decimals(1900), // amount - rewards
+                    expandTo18Decimals(100) // rewards
+                ], {includeFee: false})
+        
+        const tokenAfter = await testERC20.balanceOf(user.address)
+        const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
+        
+        await expect(tokenBefore.sub(tokenAfter)).be.equal(totalAmount)
+        await expect(poolAfter.sub(poolBefore)).be.equal(totalAmount)
+
+        // end 
+        await mineBlock(provider, now + 10 * MINUTES + 180 * DAYS)
+        await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
+            .to.be.revertedWith("DexIDOPool::buy: the pool already ended.")
 
     })
 })
