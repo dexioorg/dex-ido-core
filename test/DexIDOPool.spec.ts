@@ -93,11 +93,8 @@ describe('DexIDOPool Test', () => {
 
         await mineBlock(provider, now + 6 * DAYS)
 
-        const balanceBefore = await provider.getBalance(user.address)
-        await dexIDOPool.connect(user).withdraw(1)
-        const balanceAfter = await provider.getBalance(user.address)
-
-        expect(balanceAfter.div(balanceBefore)).equal(1)
+        await expect(await dexIDOPool.connect(user).withdraw(1))
+            .to.changeEtherBalance(user, expandTo18Decimals(1), {includeFee: false})
 
         const totalDeposit = await dexIDOPool.totalDeposit();
         expect(totalDeposit).to.equal(expandTo18Decimals(0))
@@ -249,11 +246,9 @@ describe('DexIDOPool Test', () => {
         
         expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000))
         
-        const balanceBefore = await provider.getBalance(user.address) 
-        await dexIDOPool.connect(owner).refund(user.address, expandTo18Decimals(1000))
-        expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000 - 1000))
-        const balanceAfter = await provider.getBalance(user.address) 
-        expect(balanceAfter.sub(balanceBefore)).to.equal(expandTo18Decimals(1000))
+        await expect(await dexIDOPool.connect(owner).refund(user.address, expandTo18Decimals(1000)))
+            .to.changeEtherBalances([dexIDOPool, user], ["-" + expandTo18Decimals(1000).toString(), expandTo18Decimals(1000)], {includeFee: false})
+
 
     })
 })
