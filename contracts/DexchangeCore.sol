@@ -60,10 +60,6 @@ contract DexchangeCore is ReentrancyGuard, Ownable {
             token.isContract(), 
             "DexchangeCore::setPrice: call to non-contract"
         );
-        require(
-            _price > 0, 
-            "DexchangeCore::setPrice: price is invalid"
-        );
         _exchangePrice[token] = _price;
         emit PriceChanged(token, _price);
     }
