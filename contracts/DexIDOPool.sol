@@ -365,7 +365,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
         IERC20 tokenContract = IERC20(token);
 
-        uint256 totalAmount = amount.mul(_price).div(1000000000000000000);
+        uint256 totalAmount = amount.mul(_price).div(10**18);
 
         require(
             tokenContract.balanceOf(msg.sender) >= totalAmount,
