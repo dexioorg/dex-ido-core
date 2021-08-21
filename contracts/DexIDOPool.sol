@@ -39,6 +39,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 totalAmount; // Total DEX amount of the pool
         uint256 limitPerDay; // Daily exchange limit
         uint16 rewardRate; // Reward rate for referrals(‰), use permil, eg: value 12 equals 12‰=1.2%
+        address top; // top referrer
         address creator; // IDO pool creator
     }
 
@@ -65,7 +66,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
     /* ========== EVENTS ========== */
 
-    event Deployed(uint256 start, uint256 duration, uint256 totalAmount, uint256 limitPerDay, uint16 rewardRate, address creator, address dexchange);
+    event Deployed(uint256 start, uint256 duration, uint256 totalAmount, uint256 limitPerDay, uint16 rewardRate, address creator, address dexchange, address top);
     event Deposited(address sender, uint256 amount);
     event Withdrawn(address sender, uint256 amount);
     event Bought(address sender, uint256 amount, address token, uint256 price);
@@ -134,7 +135,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     /*
         deploy create a pool
     */
-    function deploy(uint256 begin, uint256 duration, uint16 rewardRate, address dexchange) public payable onlyOwner nonReentrant stoppable {
+    function deploy(uint256 begin, uint256 duration, uint16 rewardRate, address dexchange, address top) public payable onlyOwner nonReentrant stoppable {
         uint256 value = msg.value;
 
         require(value > 0, 'DexIDOPool::deploy: require sending DEX to the pool');
@@ -153,6 +154,11 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             "DexIDOPool::deploy: dexchangeCore is non-contract."
         );
 
+        require(
+            top != address(0),
+            "DexIDOPool::deploy: top referrer address is invalid"
+        );
+
         uint256 totalAmount = value;
 
         //Calculate the daily exchangeable amount，limitPerDay = value / duration(days)
@@ -164,6 +170,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             totalAmount: totalAmount,
             limitPerDay: limitPerDay,
             rewardRate: rewardRate,
+            top: top,
             creator: msg.sender
         });
 
@@ -171,7 +178,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         _poolInfo = pool;
         _dexchangeAddr = dexchange;
 
-        emit Deployed(begin, duration, totalAmount, limitPerDay, rewardRate, msg.sender, dexchange);
+        emit Deployed(begin, duration, totalAmount, limitPerDay, rewardRate, msg.sender, dexchange, top);
     }
 
     /*
@@ -189,11 +196,13 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         //Check if the pool is over
         require(block.timestamp <= (pool.start + pool.duration), 'DexIDOPool::deposit: the pool already ended.');
 
-        address inviter = _invitations[msg.sender];
-        require(
-            inviter != address(0),
-            "DexIDOPool::deposit: you must have a referrer"
-        );
+        if (pool.top != msg.sender) {
+            address inviter = _invitations[msg.sender];
+            require(
+                inviter != address(0),
+                "DexIDOPool::deposit: you must have a referrer"
+            );
+        }
 
         //Calculate the current time belongs to the first few days of the start of the pool
         uint256 TODAY = (block.timestamp - pool.start) / 1 days;
