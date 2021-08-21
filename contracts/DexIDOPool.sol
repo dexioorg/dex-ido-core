@@ -189,6 +189,12 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         //Check if the pool is over
         require(block.timestamp <= (pool.start + pool.duration), 'DexIDOPool::deposit: the pool already ended.');
 
+        address inviter = _invitations[msg.sender];
+        require(
+            inviter != address(0),
+            "DexIDOPool::deposit: you must have a referrer"
+        );
+
         //Calculate the current time belongs to the first few days of the start of the pool
         uint256 TODAY = (block.timestamp - pool.start) / 1 days;
 
