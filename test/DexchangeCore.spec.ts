@@ -14,7 +14,7 @@ describe('DexchangeCore Test', () => {
             gasLimit: 9999999,
         },
     })
-    const [owner, user, user1, user2] = provider.getWallets()
+    const [owner, top, user, user1, user2] = provider.getWallets()
     const loadFixture = createFixtureLoader([owner], provider)
 
     let dexchangeCore: Contract
@@ -27,7 +27,7 @@ describe('DexchangeCore Test', () => {
         testERC20 = fixture.testERC20
 
         const { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) })
         await mineBlock(provider, now + 3 * MINUTES)
     })
 

@@ -14,7 +14,7 @@ describe('DexIDOPool Test', () => {
             gasLimit: 9999999,
         },
     })
-    const [owner, user, user1, user2, user3, user4, user5, user6] = provider.getWallets()
+    const [owner, top, user, user1, user2, user3, user4, user5, user6] = provider.getWallets()
     const loadFixture = createFixtureLoader([owner], provider)
 
     let testERC20: Contract
@@ -31,40 +31,42 @@ describe('DexIDOPool Test', () => {
     it('Deploy pool', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await expect(dexIDOPool.deploy(now + 10, 5 * DAYS, 50, dexchangeCore.address, {}))
+        await expect(dexIDOPool.deploy(now + 10, 5 * DAYS, 50, dexchangeCore.address, top.address, {}))
             .to.be.revertedWith('DexIDOPool::deploy: require sending DEX to the pool')
 
-        await expect(dexIDOPool.deploy(now - 10, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now - 10, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::deploy: start time is too soon')
 
-        await expect(dexIDOPool.deploy(now + 10, 0 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now + 10, 0 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::deploy: duration is too short')
 
-        await expect(dexIDOPool.deploy(now + 10, 5 * DAYS, 1001, dexchangeCore.address, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now + 10, 5 * DAYS, 1001, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::deploy: reward rate use permil')
 
-        await expect(dexIDOPool.connect(user).deploy(now + 10, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.connect(user).deploy(now + 10, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('Ownable: caller is not the owner')
 
-        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.emit(dexIDOPool, 'Deployed')
-            .withArgs(now + 2 * MINUTES, 5 * DAYS, expandTo18Decimals(100000), expandTo18Decimals(20000), 50, owner.address, dexchangeCore.address);
+            .withArgs(now + 2 * MINUTES, 5 * DAYS, expandTo18Decimals(100000), expandTo18Decimals(20000), 50, owner.address, dexchangeCore.address, top.address);
     })
 
     it('Deposit', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) })
 
         await mineBlock(provider, now + 3 * MINUTES)
 
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(2) })
+        await dexIDOPool.connect(user).accept(top.address)
         await expect(dexIDOPool.connect(user).deposit({ value: 0 }))
             .to.be.revertedWith('DexIDOPool::deposit: require sending DEX to the pool')
 
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(2) })
 
         const totalDeposit = await dexIDOPool.totalDeposit();
-        await expect(totalDeposit).to.equal(expandTo18Decimals(2))
+        await expect(totalDeposit).to.equal(expandTo18Decimals(4))
 
         const balance = await dexIDOPool.balanceOf(user.address)
         await expect(balance).to.equal(expandTo18Decimals(2))
@@ -73,13 +75,15 @@ describe('DexIDOPool Test', () => {
     it('Withdraw', async () => {
         const { timestamp: now } = await provider.getBlock('latest')
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) })
 
         await mineBlock(provider, now + 3 * MINUTES)
 
         await expect(dexIDOPool.connect(user).withdraw(0))
             .to.be.revertedWith('DexIDOPool::withdraw: the pool is not over, amount is invalid.')
 
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(2) })
+        await dexIDOPool.connect(user).accept(top.address)
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(2) })
 
         await expect(dexIDOPool.connect(user).withdraw(expandTo18Decimals(3)))
@@ -98,7 +102,7 @@ describe('DexIDOPool Test', () => {
             .to.changeEtherBalance(user, expandTo18Decimals(1), {includeFee: false})
 
         const totalDeposit = await dexIDOPool.totalDeposit();
-        await expect(totalDeposit).to.equal(expandTo18Decimals(0))
+        await expect(totalDeposit).to.equal(expandTo18Decimals(2))
 
         const balance = await dexIDOPool.balanceOf(user.address)
         await expect(balance).to.equal(expandTo18Decimals(0))
@@ -111,7 +115,7 @@ describe('DexIDOPool Test', () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
 
-        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) }))
+        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::stoppable: contract has been stopped.')
 
         now = now + 3 * MINUTES
@@ -126,19 +130,25 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.start()
         await expect(await dexIDOPool.stopped()).to.equal(false);
 
-        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(100000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) })
     })
 
     it('Account available exchange DEX amount', async () => {
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
         await mineBlock(provider, now + 2 * MINUTES)
+
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(5000) })
+        await dexIDOPool.connect(user).accept(top.address)
+        await dexIDOPool.connect(user1).accept(top.address)
+        await dexIDOPool.connect(user2).accept(top.address)
+        await dexIDOPool.connect(user3).accept(top.address)
 
         // DAY 1
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(40000) })
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(30000) })
         await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(20000) })
-        await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(10000) })
+        await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(5000) })
 
         await expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(100000))
 
@@ -168,7 +178,7 @@ describe('DexIDOPool Test', () => {
         await expect(await dexIDOPool.availableToExchange(user2.address))
             .to.equal(expandTo18Decimals(2000))
         await expect(await dexIDOPool.availableToExchange(user3.address))
-            .to.equal(expandTo18Decimals(1000))
+            .to.equal(expandTo18Decimals(500))
 
         // DAY 3
         await mineBlock(provider, now + 2 * DAYS + 1 * HOURS)
@@ -193,11 +203,15 @@ describe('DexIDOPool Test', () => {
     it('Accept invitation', async () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
         await mineBlock(provider, now + 2 * MINUTES)
         
         await expect(dexIDOPool.connect(user).accept(user1.address))
             .to.be.revertedWith("DexIDOPool::accept: referrer did not deposit DEX");
+
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(2) })
+        await dexIDOPool.connect(user1).accept(top.address)
+        await dexIDOPool.connect(user2).accept(top.address)
 
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2) })
         await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(2) })
@@ -243,7 +257,7 @@ describe('DexIDOPool Test', () => {
             .to.be.revertedWith("DexIDOPool::refund: balance is insufficient")
 
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
         
         await expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000))
         
@@ -255,7 +269,7 @@ describe('DexIDOPool Test', () => {
     it("Buy dex, only 1 referrer", async () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
 
         await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(2000)))
             .to.be.revertedWith("DexIDOPool::buy: the pool not ready.")
@@ -272,9 +286,11 @@ describe('DexIDOPool Test', () => {
         const amount = 2000
         const totalAmount = price.mul(amount)
 
-        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(4000) })
-        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(user1).accept(top.address)
+        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(3000) })
         await dexIDOPool.connect(user).accept(user1.address)
+        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
@@ -298,10 +314,11 @@ describe('DexIDOPool Test', () => {
 
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
-            .to.changeEtherBalances([dexIDOPool, user, user1], [
+            .to.changeEtherBalances([dexIDOPool, user, user1, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(100) // rewards
+                    expandTo18Decimals(80), // rewards
+                    expandTo18Decimals(20), // top
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
@@ -320,7 +337,7 @@ describe('DexIDOPool Test', () => {
     it("Buy dex, only 2 referrer", async () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
 
         await mineBlock(provider, now + 2 * MINUTES)
 
@@ -328,11 +345,13 @@ describe('DexIDOPool Test', () => {
         const amount = 2000
         const totalAmount = price.mul(amount)
 
-        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
-        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(2000) })
-        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(user2).accept(top.address)
+        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user1).accept(user2.address)
+        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
         await dexIDOPool.connect(user).accept(user1.address)
+        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
@@ -349,11 +368,12 @@ describe('DexIDOPool Test', () => {
 
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
-            .to.changeEtherBalances([dexIDOPool, user, user1, user2], [
+            .to.changeEtherBalances([dexIDOPool, user, user1, user2, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(80), // rewards referrer1
-                    expandTo18Decimals(20) // rewards referrer2
+                    expandTo18Decimals(60), // rewards referrer1
+                    expandTo18Decimals(20), // rewards referrer2
+                    expandTo18Decimals(20) // top
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
@@ -367,7 +387,7 @@ describe('DexIDOPool Test', () => {
     it("Buy dex, only 3 referrer", async () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
 
         await mineBlock(provider, now + 2 * MINUTES)
 
@@ -375,13 +395,15 @@ describe('DexIDOPool Test', () => {
         const amount = 2000
         const totalAmount = price.mul(amount)
 
-        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
-        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(user3).accept(top.address)
         await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(1000) })
-        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user2).accept(user3.address)
+        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user1).accept(user2.address)
+        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user).accept(user1.address)
+        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
@@ -398,12 +420,13 @@ describe('DexIDOPool Test', () => {
 
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
-            .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3], [
+            .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(60), // rewards referrer1
+                    expandTo18Decimals(40), // rewards referrer1
                     expandTo18Decimals(20), // rewards referrer2
                     expandTo18Decimals(20), // rewards referrer3
+                    expandTo18Decimals(20), // top
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
@@ -417,7 +440,7 @@ describe('DexIDOPool Test', () => {
     it("Buy dex, only 4 referrer", async () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
 
         await mineBlock(provider, now + 2 * MINUTES)
 
@@ -425,15 +448,17 @@ describe('DexIDOPool Test', () => {
         const amount = 2000
         const totalAmount = price.mul(amount)
 
-        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
-        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(1000) })
-        await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(500) })
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(1000) })
+        await dexIDOPool.connect(user4).accept(top.address)
         await dexIDOPool.connect(user4).deposit({ value: expandTo18Decimals(500) })
-        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user3).accept(user4.address)
+        await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(500) })
         await dexIDOPool.connect(user2).accept(user3.address)
+        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user1).accept(user2.address)
+        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user).accept(user1.address)
+        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
@@ -450,13 +475,14 @@ describe('DexIDOPool Test', () => {
 
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
-            .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4], [
+            .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(40), // rewards referrer1
+                    expandTo18Decimals(20), // rewards referrer1
                     expandTo18Decimals(20), // rewards referrer2
                     expandTo18Decimals(20), // rewards referrer3
                     expandTo18Decimals(20), // rewards referrer4
+                    expandTo18Decimals(20), // top
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
@@ -470,7 +496,7 @@ describe('DexIDOPool Test', () => {
     it("Buy dex, more than 5 referrers, the 6th referrer no reward", async () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
-        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, { value: expandTo18Decimals(1800000) })
+        await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
 
         await mineBlock(provider, now + 2 * MINUTES)
 
@@ -478,19 +504,21 @@ describe('DexIDOPool Test', () => {
         const amount = 2000
         const totalAmount = price.mul(amount)
 
-        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
-        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(1000) })
-        await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(500) })
-        await dexIDOPool.connect(user4).deposit({ value: expandTo18Decimals(250) })
-        await dexIDOPool.connect(user5).deposit({ value: expandTo18Decimals(125) })
+        await dexIDOPool.connect(top).deposit({ value: expandTo18Decimals(250) })
+        await dexIDOPool.connect(user6).accept(top.address)
         await dexIDOPool.connect(user6).deposit({ value: expandTo18Decimals(125) })
-        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user5).accept(user6.address)
+        await dexIDOPool.connect(user5).deposit({ value: expandTo18Decimals(125) })
         await dexIDOPool.connect(user4).accept(user5.address)
+        await dexIDOPool.connect(user4).deposit({ value: expandTo18Decimals(250) })
         await dexIDOPool.connect(user3).accept(user4.address)
+        await dexIDOPool.connect(user3).deposit({ value: expandTo18Decimals(250) })
         await dexIDOPool.connect(user2).accept(user3.address)
+        await dexIDOPool.connect(user2).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user1).accept(user2.address)
+        await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
         await dexIDOPool.connect(user).accept(user1.address)
+        await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
         
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
@@ -507,7 +535,7 @@ describe('DexIDOPool Test', () => {
 
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
-            .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4, user5, user6], [
+            .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4, user5, user6, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
                     expandTo18Decimals(20), // rewards referrer1
@@ -516,6 +544,7 @@ describe('DexIDOPool Test', () => {
                     expandTo18Decimals(20), // rewards referrer4
                     expandTo18Decimals(20), // rewards referrer5
                     expandTo18Decimals(0), // referrer6 no rewards
+                    expandTo18Decimals(0), // top no rewards
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
