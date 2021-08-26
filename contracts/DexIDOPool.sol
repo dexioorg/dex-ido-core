@@ -36,7 +36,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     struct IDOPool {
         uint256 start; // IDO pool starting time
         uint256 duration; // IDO pool duration
-        uint256 totalAmount; // Total DEX amount of the pool
+        uint256 totalAmount; // Total supply DEX amount of the pool
         uint256 limitPerDay; // Daily exchange limit
         uint16 rewardRate; // Reward rate for referrals(‰), use permil, eg: value 12 equals 12‰=1.2%
         address top; // top referrer
@@ -88,14 +88,17 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _stopped;
     }
 
+    // total deposited amount
     function totalDeposit() public view returns (uint256) {
         return _totalDepositOf;
     }
 
+    // deposit DEX balance of the account
     function balanceOf(address account) public view returns (uint256) {
         return _balanceOf[account];
     }
 
+    // available DEX amount for the account today
     function availableToExchange(address account) public view returns (uint256) {
         IDOPool storage pool = _poolInfo;
 
@@ -118,8 +121,36 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return available;
     }
 
+    // total exchanged
     function exchanged() public view returns (uint256) {
         return _totalExchange;
+    }
+
+    // pool starting time
+    function poolStart() public view returns (uint256) {
+        return _poolInfo.start;
+    }
+
+    // pool duration
+    function poolDuration() public view returns (uint256) {
+        return _poolInfo.duration;
+    }
+
+    // total supply DEX amount of the pool 
+    function poolTotal() public view returns (uint256) {
+        return _poolInfo.totalAmount;
+    }
+
+    // supply DEX amount daily
+    function poolDailyLimit() public view returns (uint256) {
+        return _poolInfo.limitPerDay;
+    }
+
+    // exchanged DEX amount of the date
+    // date - unix timestamp of zero hour UTC+0
+    function exchangedDaily(uint256 date) public view returns (uint256) {
+        uint256 TODAY = (date - _poolInfo.start) / 1 days;
+        return _dailyDeposit[TODAY];
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
