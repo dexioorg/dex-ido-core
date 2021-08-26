@@ -49,6 +49,9 @@ describe('DexIDOPool Test', () => {
         await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.emit(dexIDOPool, 'Deployed')
             .withArgs(now + 2 * MINUTES, 5 * DAYS, expandTo18Decimals(100000), expandTo18Decimals(20000), 50, owner.address, dexchangeCore.address, top.address);
+        
+        await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
+            .to.be.revertedWith('DexIDOPool::deploy: the pool have been deployed')
     })
 
     it('Deposit', async () => {

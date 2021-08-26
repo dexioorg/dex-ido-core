@@ -169,6 +169,8 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     function deploy(uint256 begin, uint256 duration, uint16 rewardRate, address dexchange, address top) public payable onlyOwner nonReentrant stoppable {
         uint256 value = msg.value;
 
+        require(_poolInfo.start == 0, "DexIDOPool::deploy: the pool have been deployed");
+
         require(value > 0, 'DexIDOPool::deploy: require sending DEX to the pool');
 
         require(begin >= block.timestamp, 'DexIDOPool::deploy: start time is too soon');
