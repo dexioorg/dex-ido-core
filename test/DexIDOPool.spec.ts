@@ -208,6 +208,9 @@ describe('DexIDOPool Test', () => {
         var { timestamp: now } = await provider.getBlock('latest')
         await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
         await mineBlock(provider, now + 2 * MINUTES)
+
+        await expect(dexIDOPool.connect(user).accept(user.address))
+            .to.be.revertedWith("DexIDOPool::accept: sender can not be the referrer");
         
         await expect(dexIDOPool.connect(user).accept(user1.address))
             .to.be.revertedWith("DexIDOPool::accept: referrer did not deposit DEX");

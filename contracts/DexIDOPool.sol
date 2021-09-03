@@ -365,6 +365,10 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         Account accept invitation from referrer. 
     */
     function accept(address referrer) public stoppable {
+        require(
+            referrer != msg.sender,
+            "DexIDOPool::accept: sender can not be the referrer"
+        );
         // require referrer has deposited.
         require(
             _balanceOf[referrer] > 0,
