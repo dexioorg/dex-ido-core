@@ -17,5 +17,10 @@ module.exports = {
       url: "https://rpc.testnet.dex.io",
       accounts: [`0x${DEPLOYER_PRIVATE_KEY}`]
     }
+  },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    }
   }
 };
