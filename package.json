@@ -8,7 +8,11 @@
   },
   "license": "GPL-3.0-or-later",
   "files": [
-    "build"
+    "contracts/libraries",
+    "artifacts/contracts/DexchangeCore.sol/DexchangeCore.json",
+    "artifacts/contracts/DexIDOPool.sol/DexIDOPool.json",
+    "artifacts/contracts/libraries/**/*.json",
+    "!artifacts/contracts/libraries/**/*.dbg.json"
   ],
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
