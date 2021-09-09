@@ -323,8 +323,8 @@ describe('DexIDOPool Test', () => {
             .to.changeEtherBalances([dexIDOPool, user, user1, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(80), // rewards
-                    expandTo18Decimals(20), // top
+                    expandTo18Decimals(60), // rewards
+                    expandTo18Decimals(40), // top
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
@@ -429,10 +429,10 @@ describe('DexIDOPool Test', () => {
             .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(40), // rewards referrer1
+                    expandTo18Decimals(60), // rewards referrer1
                     expandTo18Decimals(20), // rewards referrer2
-                    expandTo18Decimals(20), // rewards referrer3
-                    expandTo18Decimals(20), // top
+                    expandTo18Decimals(10), // rewards referrer3
+                    expandTo18Decimals(10), // top
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
@@ -484,11 +484,11 @@ describe('DexIDOPool Test', () => {
             .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(20), // rewards referrer1
+                    expandTo18Decimals(60), // rewards referrer1
                     expandTo18Decimals(20), // rewards referrer2
-                    expandTo18Decimals(20), // rewards referrer3
-                    expandTo18Decimals(20), // rewards referrer4
-                    expandTo18Decimals(20), // top
+                    expandTo18Decimals(10), // rewards referrer3
+                    expandTo18Decimals(5), // rewards referrer4
+                    expandTo18Decimals(5), // top
                 ], {includeFee: false})
         
         const tokenAfter = await testERC20.balanceOf(user.address)
@@ -544,11 +544,11 @@ describe('DexIDOPool Test', () => {
             .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4, user5, user6, top], [
                     "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
                     expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(20), // rewards referrer1
+                    expandTo18Decimals(60), // rewards referrer1
                     expandTo18Decimals(20), // rewards referrer2
-                    expandTo18Decimals(20), // rewards referrer3
-                    expandTo18Decimals(20), // rewards referrer4
-                    expandTo18Decimals(20), // rewards referrer5
+                    expandTo18Decimals(10), // rewards referrer3
+                    expandTo18Decimals(5), // rewards referrer4
+                    expandTo18Decimals(5), // rewards referrer5 
                     expandTo18Decimals(0), // referrer6 no rewards
                     expandTo18Decimals(0), // top no rewards
                 ], {includeFee: false})
