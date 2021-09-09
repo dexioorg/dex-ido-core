@@ -477,30 +477,30 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
                         inviter5 = _invitations[inviter4];
                         if (inviter5 != address(0)) {
                             // 5 level referrers
-                            reward5 = rewards.div(5);
-                            reward4 = reward5;
-                            reward3 = reward4;
-                            reward2 = reward3;
+                            reward5 = rewards.div(20);
+                            reward4 = rewards.div(20);
+                            reward3 = rewards.div(10);
+                            reward2 = rewards.div(5);
                             reward1 = rewards.sub(reward2).sub(reward3);
                             reward1 = reward1.sub(reward4).sub(reward5);
                             
                         } else {
                             // only 4 level referrers
-                            reward4 = rewards.div(5);
-                            reward3 = reward4;
-                            reward2 = reward3;
+                            reward4 = rewards.div(10);
+                            reward3 = rewards.div(10);
+                            reward2 = rewards.div(5);
                             reward1 = rewards.sub(reward2).sub(reward3);
                             reward1 = reward1.sub(reward4);
                         }
                     } else {
                         // only 3 level referrers
                         reward3 = rewards.div(5);
-                        reward2 = reward3;
+                        reward2 = rewards.div(5);
                         reward1 = rewards.sub(reward2).sub(reward3);
                     }
                 } else {
                     // only 2 level referrers
-                    reward2 = rewards.div(5);
+                    reward2 = rewards.div(5).mul(2);
                     reward1 = rewards.sub(reward2);
                 }
             } else {
