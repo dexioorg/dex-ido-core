@@ -153,6 +153,11 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _dailyDeposit[TODAY];
     }
 
+    // get the referrer of the account
+    function referrer(address account) public view returns (address) {
+        return _invitations[account];
+    }
+
     /* ========== MUTATIVE FUNCTIONS ========== */
 
     function stop() public onlyOwner {
