@@ -73,6 +73,9 @@ describe('DexIDOPool Test', () => {
 
         const balance = await dexIDOPool.balanceOf(user.address)
         await expect(balance).to.equal(expandTo18Decimals(2))
+
+        const todayDeposit = await dexIDOPool.todayDepositOf(user.address)
+        await expect(todayDeposit).to.equal(expandTo18Decimals(2))
     })
 
     it('Withdraw', async () => {

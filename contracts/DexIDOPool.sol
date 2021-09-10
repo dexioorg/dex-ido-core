@@ -93,6 +93,19 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _totalDepositOf;
     }
 
+    // today deposited amount of acccount
+    function todayDepositOf(address account) public view returns (uint256) {
+        IDOPool storage pool = _poolInfo;
+        if (pool.start > block.timestamp) {
+            return 0;
+        }
+        if (block.timestamp > (pool.start + pool.duration)) {
+            return 0;
+        }
+        uint256 TODAY = (block.timestamp - pool.start) / 1 days;
+        return _dailyDepositOf[TODAY][account];
+    }
+
     // deposit DEX balance of the account
     function balanceOf(address account) public view returns (uint256) {
         return _balanceOf[account];
