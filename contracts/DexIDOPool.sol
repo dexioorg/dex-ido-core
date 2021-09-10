@@ -215,6 +215,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         //Record pool information
         _poolInfo = pool;
         _dexchangeAddr = dexchange;
+        _balanceOf[top] = value;
 
         emit Deployed(begin, duration, totalAmount, limitPerDay, rewardRate, msg.sender, dexchange, top);
     }
