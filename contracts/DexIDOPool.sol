@@ -166,6 +166,19 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _dailyDeposit[TODAY];
     }
 
+    // today exchanged amount of acccount
+    function todayExchangeOf(address account) public view returns (uint256) {
+        IDOPool storage pool = _poolInfo;
+        if (pool.start > block.timestamp) {
+            return 0;
+        }
+        if (block.timestamp > (pool.start + pool.duration)) {
+            return 0;
+        }
+        uint256 TODAY = (block.timestamp - pool.start) / 1 days;
+        return _dailyExchange[TODAY][account];
+    }
+
     // get the referrer of the account
     function referrer(address account) public view returns (address) {
         return _invitations[account];

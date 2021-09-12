@@ -336,6 +336,8 @@ describe('DexIDOPool Test', () => {
         await expect(tokenBefore.sub(tokenAfter)).be.equal(totalAmount)
         await expect(poolAfter.sub(poolBefore)).be.equal(totalAmount)
 
+        await expect(await dexIDOPool.todayExchangeOf(user.address)).be.equals(expandTo18Decimals(amount))
+
         // end 
         await mineBlock(provider, now + 10 * MINUTES + 180 * DAYS)
         await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
