@@ -55,6 +55,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     uint256 private _totalExchange;
     // Deposited amount of the address in the pool
     mapping(address => uint256) private _balanceOf;
+    mapping(address => uint256) private _exchangedOf;
     // Daily deposited amount of the pool
     mapping(uint256 => uint256) private _dailyDeposit;
     // Daily deposited amount of the address in the pool
@@ -66,7 +67,16 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
     /* ========== EVENTS ========== */
 
-    event Deployed(uint256 start, uint256 duration, uint256 totalAmount, uint256 limitPerDay, uint16 rewardRate, address creator, address dexchange, address top);
+    event Deployed(
+        uint256 start,
+        uint256 duration,
+        uint256 totalAmount,
+        uint256 limitPerDay,
+        uint16 rewardRate,
+        address creator,
+        address dexchange,
+        address top
+    );
     event Deposited(address sender, uint256 amount);
     event Withdrawn(address sender, uint256 amount);
     event Bought(address sender, uint256 amount, address token, uint256 price);
@@ -149,7 +159,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _poolInfo.duration;
     }
 
-    // total supply DEX amount of the pool 
+    // total supply DEX amount of the pool
     function poolTotal() public view returns (uint256) {
         return _poolInfo.totalAmount;
     }
@@ -164,6 +174,19 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     function exchangedDaily(uint256 date) public view returns (uint256) {
         uint256 TODAY = (date - _poolInfo.start) / 1 days;
         return _dailyDeposit[TODAY];
+    }
+
+    // total exchanged amount of acccount
+    function exchangedOf(address account) public view returns (uint256) {
+        IDOPool storage pool = _poolInfo;
+        if (pool.start > block.timestamp) {
+            return 0;
+        }
+        if (block.timestamp > (pool.start + pool.duration)) {
+            return 0;
+        }
+        uint256 TODAY = (block.timestamp - pool.start) / 1 days;
+        return _exchangedOf[account];
     }
 
     // today exchanged amount of acccount
@@ -197,31 +220,28 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     /*
         deploy create a pool
     */
-    function deploy(uint256 begin, uint256 duration, uint16 rewardRate, address dexchange, address top) public payable onlyOwner nonReentrant stoppable {
+    function deploy(
+        uint256 begin,
+        uint256 duration,
+        uint16 rewardRate,
+        address dexchange,
+        address top
+    ) public payable onlyOwner nonReentrant stoppable {
         uint256 value = msg.value;
 
-        require(_poolInfo.start == 0, "DexIDOPool::deploy: the pool have been deployed");
+        require(_poolInfo.start == 0, 'DexIDOPool::deploy: the pool have been deployed');
 
         require(value > 0, 'DexIDOPool::deploy: require sending DEX to the pool');
 
         require(begin >= block.timestamp, 'DexIDOPool::deploy: start time is too soon');
 
         require(duration > 0, 'DexIDOPool::deploy: duration is too short');
-        
-        require(
-            rewardRate < 1000,
-            "DexIDOPool::deploy: reward rate use permil"
-        );
 
-        require(
-            dexchange.isContract(), 
-            "DexIDOPool::deploy: dexchangeCore is non-contract."
-        );
+        require(rewardRate < 1000, 'DexIDOPool::deploy: reward rate use permil');
 
-        require(
-            top != address(0),
-            "DexIDOPool::deploy: top referrer address is invalid"
-        );
+        require(dexchange.isContract(), 'DexIDOPool::deploy: dexchangeCore is non-contract.');
+
+        require(top != address(0), 'DexIDOPool::deploy: top referrer address is invalid');
 
         uint256 totalAmount = value;
 
@@ -263,10 +283,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
         if (pool.top != msg.sender) {
             address inviter = _invitations[msg.sender];
-            require(
-                inviter != address(0),
-                "DexIDOPool::deposit: you must have a referrer"
-            );
+            require(inviter != address(0), 'DexIDOPool::deposit: you must have a referrer');
         }
 
         //Calculate the current time belongs to the first few days of the start of the pool
@@ -343,25 +360,20 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     /*
         transfer token to recipient
     */
-    function transfer(address token, address recipient, uint256 amount) public onlyOwner stoppable returns (bool) {
-       require(
-            token.isContract(), 
-            "DexIDOPool::transfer: call to non-contract."
-        );
-        require(
-            recipient != address(0),
-            "DexIDOPool::transfer: recipient is invalid."
-        );
-        require(
-            amount > 0,
-            "DexIDOPool::transfer: input amount is invalid."
-        );
-        
+    function transfer(
+        address token,
+        address recipient,
+        uint256 amount
+    ) public onlyOwner stoppable returns (bool) {
+        require(token.isContract(), 'DexIDOPool::transfer: call to non-contract.');
+        require(recipient != address(0), 'DexIDOPool::transfer: recipient is invalid.');
+        require(amount > 0, 'DexIDOPool::transfer: input amount is invalid.');
+
         IERC20 tokenContract = IERC20(token);
 
         require(
             tokenContract.balanceOf(address(this)) >= amount,
-            "DexIDOPool::transfer: token balance is insufficient"
+            'DexIDOPool::transfer: token balance is insufficient'
         );
 
         tokenContract.safeTransfer(recipient, amount);
@@ -373,20 +385,10 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         refund DEX to recipient
     */
     function refund(address payable recipient, uint256 amount) public onlyOwner stoppable returns (bool) {
-       
-        require(
-            recipient != address(0),
-            "DexIDOPool::refund: recipient is invalid."
-        );
-        require(
-            amount > 0,
-            "DexIDOPool::refund: input amount is invalid."
-        );
-        
-        require(
-            address(this).balance >= amount,
-            "DexIDOPool::refund: balance is insufficient"
-        );
+        require(recipient != address(0), 'DexIDOPool::refund: recipient is invalid.');
+        require(amount > 0, 'DexIDOPool::refund: input amount is invalid.');
+
+        require(address(this).balance >= amount, 'DexIDOPool::refund: balance is insufficient');
 
         recipient.transfer(amount);
 
@@ -397,29 +399,19 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         Account accept invitation from referrer. 
     */
     function accept(address _referrer) public stoppable {
-        require(
-            _referrer != msg.sender,
-            "DexIDOPool::accept: sender can not be the referrer"
-        );
+        require(_referrer != msg.sender, 'DexIDOPool::accept: sender can not be the referrer');
         // require referrer has deposited.
-        require(
-            _balanceOf[_referrer] > 0,
-            "DexIDOPool::accept: referrer did not deposit DEX"
-        );
+        require(_balanceOf[_referrer] > 0, 'DexIDOPool::accept: referrer did not deposit DEX');
 
-        require(
-            _invitations[msg.sender] == address(0),
-            "DexIDOPool::accept: has been accepted invitation"
-        );
+        require(_invitations[msg.sender] == address(0), 'DexIDOPool::accept: has been accepted invitation');
 
         _invitations[msg.sender] = _referrer;
     }
-    
+
     /*
         buy DEX, sending token to exchange
     */
     function buy(address token, uint256 amount) public nonReentrant stoppable {
-        
         IDOPool storage pool = _poolInfo;
 
         //Check if the pool has started
@@ -428,36 +420,24 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         //Check if the pool is over
         require(block.timestamp <= (pool.start + pool.duration), 'DexIDOPool::buy: the pool already ended.');
 
-        require(
-            token.isContract(), 
-            "DexIDOPool::buy: call to non-contract."
-        );
+        require(token.isContract(), 'DexIDOPool::buy: call to non-contract.');
 
-        require(
-            amount > 0,
-            "DexIDOPool::buy: input amount is invalid."
-        );
+        require(amount > 0, 'DexIDOPool::buy: input amount is invalid.');
 
         DexchangeCore dexchangeCore = DexchangeCore(_dexchangeAddr);
 
         uint256 _price = dexchangeCore.price(token);
 
-        require(
-            _price > 0,
-            "DexIDOPool::buy: do not support the token."
-        );
+        require(_price > 0, 'DexIDOPool::buy: do not support the token.');
 
         IERC20 tokenContract = IERC20(token);
 
         uint256 totalAmount = amount.mul(_price).div(10**18);
 
-        require(
-            tokenContract.balanceOf(msg.sender) >= totalAmount,
-            "DexIDOPool::buy: token balance is insufficient"
-        );
+        require(tokenContract.balanceOf(msg.sender) >= totalAmount, 'DexIDOPool::buy: token balance is insufficient');
         require(
             tokenContract.allowance(msg.sender, address(this)) >= totalAmount,
-            "DexIDOPool::buy: token allowance is insufficient"
+            'DexIDOPool::buy: token allowance is insufficient'
         );
 
         // fetch available DEX amount, and subtract the bought amount
@@ -465,19 +445,13 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 TODAY = (block.timestamp - pool.start) / 1 days;
         uint256 today = _dailyExchange[TODAY][msg.sender];
 
-        require(
-            available.sub(today) >= amount,
-            "DexIDOPool::buy: amount exceeds the available amount"
-        );
+        require(available.sub(today) >= amount, 'DexIDOPool::buy: amount exceeds the available amount');
 
         // calculate the referral rewards
         uint256 rewards = amount.mul(pool.rewardRate).div(1000);
         address inviter1 = _invitations[msg.sender];
-        
-        require(
-            inviter1 != address(0),
-            "DexIDOPool::buy: you must have a referrer"
-        );
+
+        require(inviter1 != address(0), 'DexIDOPool::buy: you must have a referrer');
 
         // send token to Contract
         tokenContract.safeTransferFrom(msg.sender, address(this), totalAmount);
@@ -510,7 +484,6 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
                             reward2 = rewards.div(5);
                             reward1 = rewards.sub(reward2).sub(reward3);
                             reward1 = reward1.sub(reward4).sub(reward5);
-                            
                         } else {
                             // only 4 level referrers
                             reward4 = rewards.div(10);
@@ -535,7 +508,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
                 reward1 = rewards;
             }
 
-            // send DEX reward to inviters  
+            // send DEX reward to inviters
             address(uint160(inviter1)).transfer(reward1);
             if (reward2 > 0) {
                 address(uint160(inviter2)).transfer(reward2);
@@ -550,9 +523,10 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
                 address(uint160(inviter5)).transfer(reward5);
             }
         }
-    
+
         _totalExchange = _totalExchange.add(amount);
 
+        _exchangedOf[msg.sender] = _exchangedOf[msg.sender].add(amount);
         _dailyExchange[TODAY][msg.sender] = today.add(amount);
 
         // send DEX to sender, subtract rewards
@@ -560,5 +534,4 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
 
         emit Bought(msg.sender, amount, token, _price);
     }
-
 }
