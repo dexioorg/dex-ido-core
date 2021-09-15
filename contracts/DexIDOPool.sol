@@ -58,10 +58,11 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     mapping(address => uint256) private _exchangedOf;
     // Daily deposited amount of the pool
     mapping(uint256 => uint256) private _dailyDeposit;
+    mapping(uint256 => uint256) private _dailyExchange;
     // Daily deposited amount of the address in the pool
     mapping(uint256 => mapping(address => uint256)) private _dailyDepositOf;
     // The account's daily exchanged amount of DEX
-    mapping(uint256 => mapping(address => uint256)) private _dailyExchange;
+    mapping(uint256 => mapping(address => uint256)) private _dailyExchangeOf;
     // Invitation map of accounts
     mapping(address => address) private _invitations;
 
@@ -103,6 +104,25 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return _totalDepositOf;
     }
 
+    // deposited DEX amount of the date
+    // date - unix timestamp of zero hour UTC+0
+    function depositDaily(uint256 date) public view returns (uint256) {
+        uint256 TODAY = (date - _poolInfo.start) / 1 days;
+        return _dailyDeposit[TODAY];
+    }
+    
+    function todayDeposit() public view returns (uint256) {
+        IDOPool storage pool = _poolInfo;
+        if (pool.start > block.timestamp) {
+            return 0;
+        }
+        if (block.timestamp > (pool.start + pool.duration)) {
+            return 0;
+        }
+        uint256 TODAY = (block.timestamp - pool.start) / 1 days;
+        return _dailyDeposit[TODAY];
+    }
+
     // today deposited amount of acccount
     function todayDepositOf(address account) public view returns (uint256) {
         IDOPool storage pool = _poolInfo;
@@ -117,7 +137,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     }
 
     // deposit DEX balance of the account
-    function balanceOf(address account) public view returns (uint256) {
+    function depositOf(address account) public view returns (uint256) {
         return _balanceOf[account];
     }
 
@@ -173,7 +193,19 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     // date - unix timestamp of zero hour UTC+0
     function exchangedDaily(uint256 date) public view returns (uint256) {
         uint256 TODAY = (date - _poolInfo.start) / 1 days;
-        return _dailyDeposit[TODAY];
+        return _dailyExchange[TODAY];
+    }
+
+    function todayExchange() public view returns (uint256) {
+        IDOPool storage pool = _poolInfo;
+        if (pool.start > block.timestamp) {
+            return 0;
+        }
+        if (block.timestamp > (pool.start + pool.duration)) {
+            return 0;
+        }
+        uint256 TODAY = (block.timestamp - pool.start) / 1 days;
+        return _dailyExchange[TODAY];
     }
 
     // total exchanged amount of acccount
@@ -191,7 +223,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             return 0;
         }
         uint256 TODAY = (block.timestamp - pool.start) / 1 days;
-        return _dailyExchange[TODAY][account];
+        return _dailyExchangeOf[TODAY][account];
     }
 
     // get the referrer of the account
@@ -313,15 +345,15 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
             require(amount > 0, 'DexIDOPool::withdraw: the pool is not over, amount is invalid.');
 
             uint256 TODAY = (block.timestamp - pool.start) / 1 days;
-            uint256 todayDeposit = _dailyDepositOf[TODAY][msg.sender];
+            uint256 todayDepo = _dailyDepositOf[TODAY][msg.sender];
 
-            require(todayDeposit >= amount, 'DexIDOPool::withdraw: the amount deposited today is not enough.');
+            require(todayDepo >= amount, 'DexIDOPool::withdraw: the amount deposited today is not enough.');
 
             _totalDepositOf = total.sub(amount);
 
             _balanceOf[msg.sender] = _balanceOf[msg.sender].sub(amount);
 
-            _dailyDepositOf[TODAY][msg.sender] = todayDeposit.sub(amount);
+            _dailyDepositOf[TODAY][msg.sender] = todayDepo.sub(amount);
             _dailyDeposit[TODAY] = _dailyDeposit[TODAY].sub(amount);
 
             // transfer DEX to the address
@@ -435,7 +467,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         // fetch available DEX amount, and subtract the bought amount
         uint256 available = this.availableToExchange(msg.sender);
         uint256 TODAY = (block.timestamp - pool.start) / 1 days;
-        uint256 today = _dailyExchange[TODAY][msg.sender];
+        uint256 today = _dailyExchangeOf[TODAY][msg.sender];
 
         require(available.sub(today) >= amount, 'DexIDOPool::buy: amount exceeds the available amount');
 
@@ -517,9 +549,9 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         }
 
         _totalExchange = _totalExchange.add(amount);
-
+        _dailyExchange[TODAY] = _dailyExchange[TODAY].add(amount);
         _exchangedOf[msg.sender] = _exchangedOf[msg.sender].add(amount);
-        _dailyExchange[TODAY][msg.sender] = today.add(amount);
+        _dailyExchangeOf[TODAY][msg.sender] = today.add(amount);
 
         // send DEX to sender, subtract rewards
         msg.sender.transfer(amount.sub(rewards));

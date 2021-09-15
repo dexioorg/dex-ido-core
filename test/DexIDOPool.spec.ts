@@ -49,7 +49,7 @@ describe('DexIDOPool Test', () => {
         await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.emit(dexIDOPool, 'Deployed')
             .withArgs(now + 2 * MINUTES, 5 * DAYS, expandTo18Decimals(100000), expandTo18Decimals(20000), 50, owner.address, dexchangeCore.address, top.address);
-        
+
         await expect(dexIDOPool.deploy(now + 2 * MINUTES, 5 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(100000) }))
             .to.be.revertedWith('DexIDOPool::deploy: the pool have been deployed')
     })
@@ -68,14 +68,13 @@ describe('DexIDOPool Test', () => {
 
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(2) })
 
-        const totalDeposit = await dexIDOPool.totalDeposit();
-        await expect(totalDeposit).to.equal(expandTo18Decimals(4))
+        await expect(await dexIDOPool.totalDeposit()).to.equal(expandTo18Decimals(4))
 
-        const balance = await dexIDOPool.balanceOf(user.address)
-        await expect(balance).to.equal(expandTo18Decimals(2))
+        await expect(await dexIDOPool.todayDeposit()).to.equal(expandTo18Decimals(4))
 
-        const todayDeposit = await dexIDOPool.todayDepositOf(user.address)
-        await expect(todayDeposit).to.equal(expandTo18Decimals(2))
+        await expect(await dexIDOPool.depositOf(user.address)).to.equal(expandTo18Decimals(2))
+
+        await expect(await dexIDOPool.todayDepositOf(user.address)).to.equal(expandTo18Decimals(2))
     })
 
     it('Withdraw', async () => {
@@ -105,12 +104,12 @@ describe('DexIDOPool Test', () => {
         await mineBlock(provider, now + 6 * DAYS)
 
         await expect(await dexIDOPool.connect(user).withdraw(1))
-            .to.changeEtherBalance(user, expandTo18Decimals(1), {includeFee: false})
+            .to.changeEtherBalance(user, expandTo18Decimals(1), { includeFee: false })
 
         const totalDeposit = await dexIDOPool.totalDeposit();
         await expect(totalDeposit).to.equal(expandTo18Decimals(2))
 
-        const balance = await dexIDOPool.balanceOf(user.address)
+        const balance = await dexIDOPool.depositOf(user.address)
         await expect(balance).to.equal(expandTo18Decimals(0))
     })
 
@@ -214,7 +213,7 @@ describe('DexIDOPool Test', () => {
 
         await expect(dexIDOPool.connect(user).accept(user.address))
             .to.be.revertedWith("DexIDOPool::accept: sender can not be the referrer");
-        
+
         await expect(dexIDOPool.connect(user).accept(user1.address))
             .to.be.revertedWith("DexIDOPool::accept: referrer did not deposit DEX");
 
@@ -248,7 +247,7 @@ describe('DexIDOPool Test', () => {
         await expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(0)
         await testERC20.transfer(dexIDOPool.address, expandTo18Decimals(2000))
         await expect(await testERC20.balanceOf(dexIDOPool.address)).to.equal(expandTo18Decimals(2000))
-        
+
         await expect(await testERC20.balanceOf(user.address)).to.equal(0)
         await dexIDOPool.connect(owner).transfer(testERC20.address, user.address, expandTo18Decimals(1000))
         await expect(await testERC20.balanceOf(user.address)).to.equal(expandTo18Decimals(1000))
@@ -267,11 +266,11 @@ describe('DexIDOPool Test', () => {
 
         var { timestamp: now } = await provider.getBlock('latest')
         await dexIDOPool.deploy(now + 2 * MINUTES, 180 * DAYS, 50, dexchangeCore.address, top.address, { value: expandTo18Decimals(1800000) })
-        
+
         await expect(await provider.getBalance(dexIDOPool.address)).to.equal(expandTo18Decimals(1800000))
-        
+
         await expect(await dexIDOPool.connect(owner).refund(user.address, expandTo18Decimals(1000)))
-            .to.changeEtherBalances([dexIDOPool, user], ["-" + expandTo18Decimals(1000).toString(), expandTo18Decimals(1000)], {includeFee: false})
+            .to.changeEtherBalances([dexIDOPool, user], ["-" + expandTo18Decimals(1000).toString(), expandTo18Decimals(1000)], { includeFee: false })
 
     })
 
@@ -300,7 +299,7 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(3000) })
         await dexIDOPool.connect(user).accept(user1.address)
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
-        
+
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
 
@@ -309,13 +308,13 @@ describe('DexIDOPool Test', () => {
 
         await expect(() => testERC20.transfer(user.address, totalAmount))
             .to.changeTokenBalance(testERC20, user, totalAmount)
-            
+
         await expect(await dexIDOPool.availableToExchange(user.address))
             .be.equal(expandTo18Decimals(amount)) // amount = 2000
-        
+
         await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.be.revertedWith("DexIDOPool::buy: token allowance is insufficient")
-        
+
         await testERC20.connect(user).approve(dexIDOPool.address, totalAmount)
 
         const tokenBefore = await testERC20.balanceOf(user.address)
@@ -324,21 +323,25 @@ describe('DexIDOPool Test', () => {
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.changeEtherBalances([dexIDOPool, user, user1, top], [
-                    "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
-                    expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(60), // rewards
-                    expandTo18Decimals(40), // top
-                ], {includeFee: false})
-        
+                "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
+                expandTo18Decimals(1900), // amount - rewards
+                expandTo18Decimals(60), // rewards
+                expandTo18Decimals(40), // top
+            ], { includeFee: false })
+
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
-        
+
         await expect(tokenBefore.sub(tokenAfter)).be.equal(totalAmount)
         await expect(poolAfter.sub(poolBefore)).be.equal(totalAmount)
 
         await expect(await dexIDOPool.todayExchangeOf(user.address)).be.equals(expandTo18Decimals(amount))
 
         await expect(await dexIDOPool.exchangedOf(user.address)).be.equals(expandTo18Decimals(amount))
+
+        await expect(await dexIDOPool.exchanged()).be.equals(expandTo18Decimals(amount))
+
+        await expect(await dexIDOPool.todayExchange()).be.equals(expandTo18Decimals(amount))
 
         // end 
         await mineBlock(provider, now + 10 * MINUTES + 180 * DAYS)
@@ -365,7 +368,7 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
         await dexIDOPool.connect(user).accept(user1.address)
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
-        
+
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
 
@@ -373,7 +376,7 @@ describe('DexIDOPool Test', () => {
 
         await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.be.revertedWith("DexIDOPool::buy: token allowance is insufficient")
-        
+
         await testERC20.connect(user).approve(dexIDOPool.address, totalAmount)
 
         const tokenBefore = await testERC20.balanceOf(user.address)
@@ -382,16 +385,16 @@ describe('DexIDOPool Test', () => {
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.changeEtherBalances([dexIDOPool, user, user1, user2, top], [
-                    "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
-                    expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(60), // rewards referrer1
-                    expandTo18Decimals(20), // rewards referrer2
-                    expandTo18Decimals(20) // top
-                ], {includeFee: false})
-        
+                "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
+                expandTo18Decimals(1900), // amount - rewards
+                expandTo18Decimals(60), // rewards referrer1
+                expandTo18Decimals(20), // rewards referrer2
+                expandTo18Decimals(20) // top
+            ], { includeFee: false })
+
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
-        
+
         await expect(tokenBefore.sub(tokenAfter)).be.equal(totalAmount)
         await expect(poolAfter.sub(poolBefore)).be.equal(totalAmount)
 
@@ -417,7 +420,7 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user).accept(user1.address)
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
-        
+
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
 
@@ -425,7 +428,7 @@ describe('DexIDOPool Test', () => {
 
         await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.be.revertedWith("DexIDOPool::buy: token allowance is insufficient")
-        
+
         await testERC20.connect(user).approve(dexIDOPool.address, totalAmount)
 
         const tokenBefore = await testERC20.balanceOf(user.address)
@@ -434,17 +437,17 @@ describe('DexIDOPool Test', () => {
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, top], [
-                    "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
-                    expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(60), // rewards referrer1
-                    expandTo18Decimals(20), // rewards referrer2
-                    expandTo18Decimals(10), // rewards referrer3
-                    expandTo18Decimals(10), // top
-                ], {includeFee: false})
-        
+                "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
+                expandTo18Decimals(1900), // amount - rewards
+                expandTo18Decimals(60), // rewards referrer1
+                expandTo18Decimals(20), // rewards referrer2
+                expandTo18Decimals(10), // rewards referrer3
+                expandTo18Decimals(10), // top
+            ], { includeFee: false })
+
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
-        
+
         await expect(tokenBefore.sub(tokenAfter)).be.equal(totalAmount)
         await expect(poolAfter.sub(poolBefore)).be.equal(totalAmount)
 
@@ -472,7 +475,7 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(1000) })
         await dexIDOPool.connect(user).accept(user1.address)
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
-        
+
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
 
@@ -480,7 +483,7 @@ describe('DexIDOPool Test', () => {
 
         await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.be.revertedWith("DexIDOPool::buy: token allowance is insufficient")
-        
+
         await testERC20.connect(user).approve(dexIDOPool.address, totalAmount)
 
         const tokenBefore = await testERC20.balanceOf(user.address)
@@ -489,18 +492,18 @@ describe('DexIDOPool Test', () => {
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4, top], [
-                    "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
-                    expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(60), // rewards referrer1
-                    expandTo18Decimals(20), // rewards referrer2
-                    expandTo18Decimals(10), // rewards referrer3
-                    expandTo18Decimals(5), // rewards referrer4
-                    expandTo18Decimals(5), // top
-                ], {includeFee: false})
-        
+                "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
+                expandTo18Decimals(1900), // amount - rewards
+                expandTo18Decimals(60), // rewards referrer1
+                expandTo18Decimals(20), // rewards referrer2
+                expandTo18Decimals(10), // rewards referrer3
+                expandTo18Decimals(5), // rewards referrer4
+                expandTo18Decimals(5), // top
+            ], { includeFee: false })
+
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
-        
+
         await expect(tokenBefore.sub(tokenAfter)).be.equal(totalAmount)
         await expect(poolAfter.sub(poolBefore)).be.equal(totalAmount)
 
@@ -532,7 +535,7 @@ describe('DexIDOPool Test', () => {
         await dexIDOPool.connect(user1).deposit({ value: expandTo18Decimals(2000) })
         await dexIDOPool.connect(user).accept(user1.address)
         await dexIDOPool.connect(user).deposit({ value: expandTo18Decimals(1000) })
-        
+
         // T+1
         await mineBlock(provider, now + 2 * MINUTES + 1 * DAYS)
 
@@ -540,7 +543,7 @@ describe('DexIDOPool Test', () => {
 
         await expect(dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.be.revertedWith("DexIDOPool::buy: token allowance is insufficient")
-        
+
         await testERC20.connect(user).approve(dexIDOPool.address, totalAmount)
 
         const tokenBefore = await testERC20.balanceOf(user.address)
@@ -549,20 +552,20 @@ describe('DexIDOPool Test', () => {
         // amount = 2000, rewards = amount * 50/1000  
         await expect(await dexIDOPool.connect(user).buy(testERC20.address, expandTo18Decimals(amount)))
             .to.changeEtherBalances([dexIDOPool, user, user1, user2, user3, user4, user5, user6, top], [
-                    "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
-                    expandTo18Decimals(1900), // amount - rewards
-                    expandTo18Decimals(60), // rewards referrer1
-                    expandTo18Decimals(20), // rewards referrer2
-                    expandTo18Decimals(10), // rewards referrer3
-                    expandTo18Decimals(5), // rewards referrer4
-                    expandTo18Decimals(5), // rewards referrer5 
-                    expandTo18Decimals(0), // referrer6 no rewards
-                    expandTo18Decimals(0), // top no rewards
-                ], {includeFee: false})
-        
+                "-" + expandTo18Decimals(amount).toString(), // pool reduce DEX
+                expandTo18Decimals(1900), // amount - rewards
+                expandTo18Decimals(60), // rewards referrer1
+                expandTo18Decimals(20), // rewards referrer2
+                expandTo18Decimals(10), // rewards referrer3
+                expandTo18Decimals(5), // rewards referrer4
+                expandTo18Decimals(5), // rewards referrer5 
+                expandTo18Decimals(0), // referrer6 no rewards
+                expandTo18Decimals(0), // top no rewards
+            ], { includeFee: false })
+
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
-        
+
         await expect(tokenBefore.sub(tokenAfter)).be.equal(totalAmount)
         await expect(poolAfter.sub(poolBefore)).be.equal(totalAmount)
 
