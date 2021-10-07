@@ -81,6 +81,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
     event Deposited(address sender, uint256 amount);
     event Withdrawn(address sender, uint256 amount);
     event Bought(address sender, uint256 amount, address token, uint256 price);
+    event Rewarded(address indexed to, address indexed from, uint256 amount, uint256 exchanged, uint8 level);
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -110,7 +111,7 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         uint256 TODAY = (date - _poolInfo.start) / 1 days;
         return _dailyDeposit[TODAY];
     }
-    
+
     function todayDeposit() public view returns (uint256) {
         IDOPool storage pool = _poolInfo;
         if (pool.start > block.timestamp) {
@@ -480,74 +481,6 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         // send token to Contract
         tokenContract.safeTransferFrom(msg.sender, address(this), totalAmount);
 
-        if (inviter1 != address(0)) {
-            // 1st level referrer
-            uint256 reward1 = 0;
-            uint256 reward2 = 0;
-            uint256 reward3 = 0;
-            uint256 reward4 = 0;
-            uint256 reward5 = 0;
-            address inviter2 = _invitations[inviter1];
-            address inviter3 = address(0);
-            address inviter4 = address(0);
-            address inviter5 = address(0);
-            if (inviter2 != address(0)) {
-                // 2nd level referrer
-                inviter3 = _invitations[inviter2];
-                if (inviter3 != address(0)) {
-                    // 3rd level referrer
-                    inviter4 = _invitations[inviter3];
-                    // 4th level referrer
-                    if (inviter4 != address(0)) {
-                        inviter5 = _invitations[inviter4];
-                        if (inviter5 != address(0)) {
-                            // 5 level referrers
-                            reward5 = rewards.div(20);
-                            reward4 = rewards.div(20);
-                            reward3 = rewards.div(10);
-                            reward2 = rewards.div(5);
-                            reward1 = rewards.sub(reward2).sub(reward3);
-                            reward1 = reward1.sub(reward4).sub(reward5);
-                        } else {
-                            // only 4 level referrers
-                            reward4 = rewards.div(10);
-                            reward3 = rewards.div(10);
-                            reward2 = rewards.div(5);
-                            reward1 = rewards.sub(reward2).sub(reward3);
-                            reward1 = reward1.sub(reward4);
-                        }
-                    } else {
-                        // only 3 level referrers
-                        reward3 = rewards.div(5);
-                        reward2 = rewards.div(5);
-                        reward1 = rewards.sub(reward2).sub(reward3);
-                    }
-                } else {
-                    // only 2 level referrers
-                    reward2 = rewards.div(5).mul(2);
-                    reward1 = rewards.sub(reward2);
-                }
-            } else {
-                // only 1 level referrer
-                reward1 = rewards;
-            }
-
-            // send DEX reward to inviters
-            address(uint160(inviter1)).transfer(reward1);
-            if (reward2 > 0) {
-                address(uint160(inviter2)).transfer(reward2);
-            }
-            if (reward3 > 0) {
-                address(uint160(inviter3)).transfer(reward3);
-            }
-            if (reward4 > 0) {
-                address(uint160(inviter4)).transfer(reward4);
-            }
-            if (reward5 > 0) {
-                address(uint160(inviter5)).transfer(reward5);
-            }
-        }
-
         _totalExchange = _totalExchange.add(amount);
         _dailyExchange[TODAY] = _dailyExchange[TODAY].add(amount);
         _exchangedOf[msg.sender] = _exchangedOf[msg.sender].add(amount);
@@ -557,5 +490,78 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         msg.sender.transfer(amount.sub(rewards));
 
         emit Bought(msg.sender, amount, token, _price);
+
+        uint256 amt = amount;
+
+        // 1st level referrer
+        uint256 reward1 = 0;
+        uint256 reward2 = 0;
+        uint256 reward3 = 0;
+        uint256 reward4 = 0;
+        uint256 reward5 = 0;
+        address inviter2 = _invitations[inviter1];
+        address inviter3 = address(0);
+        address inviter4 = address(0);
+        address inviter5 = address(0);
+        if (inviter2 != address(0)) {
+            // 2nd level referrer
+            inviter3 = _invitations[inviter2];
+            if (inviter3 != address(0)) {
+                // 3rd level referrer
+                inviter4 = _invitations[inviter3];
+                // 4th level referrer
+                if (inviter4 != address(0)) {
+                    inviter5 = _invitations[inviter4];
+                    if (inviter5 != address(0)) {
+                        // 5 level referrers
+                        reward5 = rewards.div(20);
+                        reward4 = rewards.div(20);
+                        reward3 = rewards.div(10);
+                        reward2 = rewards.div(5);
+                        reward1 = rewards.sub(reward2).sub(reward3);
+                        reward1 = reward1.sub(reward4).sub(reward5);
+                    } else {
+                        // only 4 level referrers
+                        reward4 = rewards.div(10);
+                        reward3 = rewards.div(10);
+                        reward2 = rewards.div(5);
+                        reward1 = rewards.sub(reward2).sub(reward3);
+                        reward1 = reward1.sub(reward4);
+                    }
+                } else {
+                    // only 3 level referrers
+                    reward3 = rewards.div(5);
+                    reward2 = rewards.div(5);
+                    reward1 = rewards.sub(reward2).sub(reward3);
+                }
+            } else {
+                // only 2 level referrers
+                reward2 = rewards.div(5).mul(2);
+                reward1 = rewards.sub(reward2);
+            }
+        } else {
+            // only 1 level referrer
+            reward1 = rewards;
+        }
+
+        // send DEX reward to inviters
+        address(uint160(inviter1)).transfer(reward1);
+        emit Rewarded(inviter1, msg.sender, reward1, amt, 1);
+        if (reward2 > 0) {
+            address(uint160(inviter2)).transfer(reward2);
+            emit Rewarded(inviter2, msg.sender, reward2, amt, 2);
+        }
+        if (reward3 > 0) {
+            address(uint160(inviter3)).transfer(reward3);
+            emit Rewarded(inviter3, msg.sender, reward3, amt, 3);
+        }
+        if (reward4 > 0) {
+            address(uint160(inviter4)).transfer(reward4);
+            emit Rewarded(inviter4, msg.sender, reward4, amt, 4);
+        }
+        if (reward5 > 0) {
+            address(uint160(inviter5)).transfer(reward5);
+            emit Rewarded(inviter5, msg.sender, reward5, amt, 5);
+        }
     }
 }
