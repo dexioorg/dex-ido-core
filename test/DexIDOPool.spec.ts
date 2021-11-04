@@ -328,6 +328,7 @@ describe('DexIDOPool Test', () => {
                 expandTo18Decimals(60), // rewards
                 expandTo18Decimals(40), // top
             ], { includeFee: false })
+            .to.emit(dexIDOPool, 'Rewarded')
 
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
@@ -391,6 +392,7 @@ describe('DexIDOPool Test', () => {
                 expandTo18Decimals(20), // rewards referrer2
                 expandTo18Decimals(20) // top
             ], { includeFee: false })
+            .to.emit(dexIDOPool, 'Rewarded')
 
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
@@ -444,6 +446,7 @@ describe('DexIDOPool Test', () => {
                 expandTo18Decimals(10), // rewards referrer3
                 expandTo18Decimals(10), // top
             ], { includeFee: false })
+            .to.emit(dexIDOPool, 'Rewarded')
 
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
@@ -500,6 +503,7 @@ describe('DexIDOPool Test', () => {
                 expandTo18Decimals(5), // rewards referrer4
                 expandTo18Decimals(5), // top
             ], { includeFee: false })
+            .to.emit(dexIDOPool, 'Rewarded')
 
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
@@ -562,6 +566,7 @@ describe('DexIDOPool Test', () => {
                 expandTo18Decimals(0), // referrer6 no rewards
                 expandTo18Decimals(0), // top no rewards
             ], { includeFee: false })
+            .to.emit(dexIDOPool, 'Rewarded')
 
         const tokenAfter = await testERC20.balanceOf(user.address)
         const poolAfter = await testERC20.balanceOf(dexIDOPool.address)
