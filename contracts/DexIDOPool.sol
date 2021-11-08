@@ -165,29 +165,12 @@ contract DexIDOPool is ReentrancyGuard, Ownable {
         return available;
     }
 
-    // total exchanged
-    function exchanged() public view returns (uint256) {
-        return _totalExchange;
+    function poolInfo() public view returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
+        return (_poolInfo.start, _poolInfo.duration, _poolInfo.totalAmount, _totalDepositOf, this.todayDeposit(), _poolInfo.limitPerDay, this.todayExchange());
     }
 
-    // pool starting time
-    function poolStart() public view returns (uint256) {
-        return _poolInfo.start;
-    }
-
-    // pool duration
-    function poolDuration() public view returns (uint256) {
-        return _poolInfo.duration;
-    }
-
-    // total supply DEX amount of the pool
-    function poolTotal() public view returns (uint256) {
-        return _poolInfo.totalAmount;
-    }
-
-    // supply DEX amount daily
-    function poolDailyLimit() public view returns (uint256) {
-        return _poolInfo.limitPerDay;
+    function accountInfo(address account) public view returns (uint256, uint256, uint256, uint256, uint256) {
+        return (_balanceOf[account], this.availableToExchange(account), this.todayDepositOf(account), this.todayExchangeOf(account), _exchangedOf[account]);
     }
 
     // exchanged DEX amount of the date
