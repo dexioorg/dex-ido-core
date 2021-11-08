@@ -1,6 +1,6 @@
 {
   "name": "@dexioorg/dex-ido-core",
-  "version": "1.0.0-beta5",
+  "version": "1.0.0-beta6",
   "author": "dex.io",
   "repository": {
     "type": "git",
@@ -34,7 +34,8 @@
     "build": "waffle",
     "test": "export NODE_ENV=test && mocha",
     "compile": "npx hardhat compile",
-    "deploy": "npx hardhat run scripts/deploy.js --network testnet"
+    "deploy": "npx hardhat run scripts/deploy.js --network testnet",
+    "setup": "npx hardhat run scripts/setup.js --network testnet"
   },
   "dependencies": {
     "dotenv": "^10.0.0"
